@@ -14,7 +14,16 @@
     "format": "biome format --write .",
     "typecheck": "bun x tsc --noEmit",
     "test": "bun test",
-    "test:coverage": "bun test --coverage"
+    "test:coverage": "bun test --coverage",
+    "db:generate": "bun x drizzle-kit generate < /dev/null",
+    "db:migrate": "bun scripts/db/migrate.ts",
+    "db:seed": "bun scripts/db/seed.ts",
+    "db:up": "podman rm -f api-pg 2>/dev/null; podman run -d --name api-pg -e POSTGRES_USER=postgres -e POSTGRES_PASSWORD=postgres -e POSTGRES_DB=api -p 5432:5432 -v api-pg-data:/var/lib/postgresql/data docker.io/library/postgres:17-alpine; for i in $(seq 1 30); do podman exec api-pg pg_isready -U postgres -q && exit 0; sleep 1; done; echo 'db:up: postgres did not become ready in 30s' >&2; exit 1",
+    "db:down": "podman rm -f api-pg 2>/dev/null || true"
+  },
+  "dependencies": {
+    "@consulting/module-notes": "workspace:*",
+    "drizzle-orm": "0.45.2"
   },
   "devDependencies": {
     "@biomejs/biome": "2.5.6",
