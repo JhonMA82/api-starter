@@ -33,6 +33,7 @@ const MIGRATIONS_DIR = new URL("../../../migrations", import.meta.url).pathname;
 
 const PUBLIC_TABLES = [
   "account",
+  "api_keys",
   "audit_log",
   "invitations",
   "jobs",
@@ -51,10 +52,20 @@ async function expectOrganizationSchema(client: Sql): Promise<void> {
     SELECT table_name, column_name
     FROM information_schema.columns
     WHERE table_schema = 'public'
-      AND table_name IN ('organizations', 'memberships', 'invitations')
+      AND table_name IN ('organizations', 'memberships', 'invitations', 'api_keys')
     ORDER BY table_name, ordinal_position
   `)) as unknown as Column[];
   expect(columns).toEqual([
+    { table_name: "api_keys", column_name: "id" },
+    { table_name: "api_keys", column_name: "organization_id" },
+    { table_name: "api_keys", column_name: "name" },
+    { table_name: "api_keys", column_name: "prefix" },
+    { table_name: "api_keys", column_name: "key_hash" },
+    { table_name: "api_keys", column_name: "expires_at" },
+    { table_name: "api_keys", column_name: "revoked_at" },
+    { table_name: "api_keys", column_name: "last_used_at" },
+    { table_name: "api_keys", column_name: "created_at" },
+    { table_name: "api_keys", column_name: "updated_at" },
     { table_name: "invitations", column_name: "id" },
     { table_name: "invitations", column_name: "organization_id" },
     { table_name: "invitations", column_name: "email" },
@@ -83,6 +94,7 @@ async function expectOrganizationSchema(client: Sql): Promise<void> {
     FROM pg_indexes
     WHERE schemaname = 'public'
       AND indexname IN (
+        'api_keys_organization_id_idx',
         'invitations_organization_id_idx',
         'invitations_email_idx',
         'memberships_organization_id_idx',
@@ -91,6 +103,7 @@ async function expectOrganizationSchema(client: Sql): Promise<void> {
     ORDER BY indexname
   `);
   expect(indexes.map((row) => row.indexname)).toEqual([
+    "api_keys_organization_id_idx",
     "invitations_email_idx",
     "invitations_organization_id_idx",
     "memberships_organization_id_idx",
@@ -102,6 +115,7 @@ async function expectOrganizationSchema(client: Sql): Promise<void> {
     SELECT conname, contype
     FROM pg_constraint
     WHERE conname IN (
+      'api_keys_key_hash_unique',
       'organizations_name_not_blank',
       'organizations_slug_unique',
       'memberships_organization_user_unique',
@@ -110,6 +124,7 @@ async function expectOrganizationSchema(client: Sql): Promise<void> {
     ORDER BY conname
   `)) as unknown as Constraint[];
   expect(constraints).toEqual([
+    { conname: "api_keys_key_hash_unique", contype: "u" },
     { conname: "invitations_token_hash_unique", contype: "u" },
     { conname: "memberships_organization_user_unique", contype: "u" },
     { conname: "organizations_name_not_blank", contype: "c" },
@@ -124,11 +139,13 @@ async function expectOrganizationSchema(client: Sql): Promise<void> {
       AND conrelid IN (
         'public.organizations'::regclass,
         'public.memberships'::regclass,
-        'public.invitations'::regclass
+        'public.invitations'::regclass,
+        'public.api_keys'::regclass
       )
     ORDER BY conname
   `)) as unknown as ForeignKey[];
   expect(foreignKeys).toEqual([
+    { conname: "api_keys_organization_id_organizations_id_fk", confdeltype: "c" },
     { conname: "invitations_organization_id_organizations_id_fk", confdeltype: "c" },
     { conname: "memberships_organization_id_organizations_id_fk", confdeltype: "c" },
     { conname: "memberships_user_id_user_id_fk", confdeltype: "c" },
@@ -161,7 +178,7 @@ describeDb("organizations migrations (real database)", () => {
     await closeClient(client);
   });
 
-  test("from zero creates 11 public tables and Drizzle bookkeeping", async () => {
+  test("from zero creates 12 public tables and Drizzle bookkeeping", async () => {
     await resetDatabase(client);
     await migrateToLatest(client);
 
@@ -173,7 +190,7 @@ describeDb("organizations migrations (real database)", () => {
     `);
     expect(publicTables.map((row) => row.table_name)).toEqual(PUBLIC_TABLES);
     await expectOrganizationSchema(client);
-    await expectBookkeeping(client, "7");
+    await expectBookkeeping(client, "8");
   });
 
   test("0003-only database upgrades to the full organizational schema", async () => {
@@ -214,7 +231,7 @@ describeDb("organizations migrations (real database)", () => {
       await migrateToLatest(client);
 
       await expectOrganizationSchema(client);
-      await expectBookkeeping(client, "7");
+      await expectBookkeeping(client, "8");
     } finally {
       rmSync(tempDir, { recursive: true, force: true });
     }
@@ -226,7 +243,7 @@ describeDb("organizations migrations (real database)", () => {
     await migrateToLatest(client);
 
     await expectOrganizationSchema(client);
-    await expectBookkeeping(client, "7");
+    await expectBookkeeping(client, "8");
   });
 
   test("memberships FK to auth user and cascade on organization delete", async () => {

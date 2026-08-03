@@ -13,6 +13,16 @@ export type OrganizationAudit = {
   organizationSuspended(actorUserId: string, organizationId: string): Promise<void>;
   organizationDeleted(actorUserId: string, organizationId: string): Promise<void>;
   memberRemoved(actorUserId: string, organizationId: string, targetUserId: string): Promise<void>;
+  apiKeyCreated(
+    actorUserId: string,
+    organizationId: string,
+    metadata: { name: string; prefix: string },
+  ): Promise<void>;
+  apiKeyRevoked(
+    actorUserId: string,
+    organizationId: string,
+    metadata: { name: string; prefix: string },
+  ): Promise<void>;
 };
 
 export function createOrganizationAudit(audit: AuditLogger): OrganizationAudit {
@@ -82,6 +92,26 @@ export function createOrganizationAudit(audit: AuditLogger): OrganizationAudit {
         resourceId: organizationId,
         outcome: "success",
         metadata: { targetUserId },
+      });
+    },
+    apiKeyCreated(actorUserId, organizationId, metadata) {
+      return audit.record({
+        actorUserId,
+        action: "api_key.created",
+        resourceType: "api_key",
+        resourceId: organizationId,
+        outcome: "success",
+        metadata,
+      });
+    },
+    apiKeyRevoked(actorUserId, organizationId, metadata) {
+      return audit.record({
+        actorUserId,
+        action: "api_key.revoked",
+        resourceType: "api_key",
+        resourceId: organizationId,
+        outcome: "success",
+        metadata,
       });
     },
   };

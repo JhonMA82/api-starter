@@ -1,4 +1,5 @@
 import type { UnitOfWork } from "../application/ports";
+import { createApiKeyRepository } from "./api-key.repository";
 import type { DbOrTransaction, DbTransaction } from "./db";
 import { createInvitationRepository } from "./invitation.repository";
 import { createMembershipRepository } from "./membership.repository";
@@ -13,6 +14,7 @@ export function createUnitOfWork(db: DbOrTransaction): UnitOfWork {
     organizations: createOrganizationRepository(db),
     memberships: createMembershipRepository(db),
     invitations: createInvitationRepository(db),
+    apiKeys: createApiKeyRepository(db),
     outbox: createOutboxRepository(db),
   };
 }

@@ -7,10 +7,11 @@ import {
 } from "drizzle-orm/postgres-js";
 import postgres, { type Sql } from "postgres";
 
+import { apiKeys } from "./api-key.schema";
 import { invitations, memberships, organizations } from "./organization.schema";
 import { outboxEvents } from "./outbox.schema";
 
-export const schema = { organizations, memberships, invitations, outboxEvents };
+export const schema = { organizations, memberships, invitations, apiKeys, outboxEvents };
 export type Db = PostgresJsDatabase<typeof schema>;
 export type DbTransaction = PgTransaction<
   PostgresJsQueryResultHKT,

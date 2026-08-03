@@ -7,7 +7,9 @@ export type DomainEventType =
   | "ownership.transferred"
   | "organization.suspended"
   | "organization.deleted"
-  | "member.removed";
+  | "member.removed"
+  | "api_key.created"
+  | "api_key.revoked";
 
 export interface DomainEventBase {
   id: string;

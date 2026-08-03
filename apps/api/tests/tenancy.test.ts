@@ -3,6 +3,7 @@ import { type AuditLogger, createAuditDb, createAuditLogger } from "@consulting/
 import { type Auth, createAuth } from "@consulting/auth";
 import type { Config } from "@consulting/config";
 import {
+  createApiKeyRepository,
   createDb,
   createInvitationRepository,
   createMembershipRepository,
@@ -138,6 +139,7 @@ describeDb("organization HTTP API (real database)", () => {
           organizations: createOrganizationRepository(db),
           memberships: createMembershipRepository(db),
           invitations: createInvitationRepository(db),
+          apiKeys: createApiKeyRepository(db),
           uow: null,
         },
         audit: auditLogger,

@@ -1,5 +1,7 @@
 import type { AuditEntryInput, AuditLogger } from "@consulting/audit";
 import type {
+  ApiKeyRepository,
+  CreateApiKeyInput,
   CreateInvitationInput,
   CreateMembershipInput,
   CreateOrganizationInput,
@@ -9,11 +11,13 @@ import type {
   OutboxRepository,
   UnitOfWork,
 } from "../src/application/ports";
+import type { ApiKey } from "../src/domain/api-key.entity";
 import type { DomainEvent } from "../src/domain/domain-events";
 import type { Invitation } from "../src/domain/invitation.entity";
 import type { Membership } from "../src/domain/membership.entity";
 import type { Organization, OrganizationStatus } from "../src/domain/organization.entity";
 import {
+  ApiKeyNotFoundError,
   InvitationNotFoundError,
   MembershipNotFoundError,
   OrganizationNotFoundError,
@@ -49,15 +53,88 @@ export function makeMembership(overrides: Partial<Membership> = {}): Membership 
   };
 }
 
+export function makeApiKey(overrides: Partial<ApiKey> = {}): ApiKey {
+  return {
+    id: "api-key-1",
+    organizationId: "org-1",
+    name: "CI deploy key",
+    prefix: "ak_abc123",
+    keyHash: "0".repeat(64),
+    expiresAt: null,
+    revokedAt: null,
+    lastUsedAt: null,
+    createdAt: new Date("2026-01-01T00:00:00Z"),
+    updatedAt: new Date("2026-01-01T00:00:00Z"),
+    ...overrides,
+  };
+}
+
 export interface FakeRepositories {
   organizations: OrganizationRepository;
   memberships: MembershipRepository;
   invitations: InvitationRepository;
+  apiKeys: ApiKeyRepository;
   outbox: OutboxRepository;
   organizationStore: Map<string, Organization>;
   membershipStore: Map<string, Membership>;
   invitationStore: Map<string, Invitation>;
+  apiKeyStore: Map<string, ApiKey>;
   outboxStore: OutboxRecord[];
+}
+
+export function createFakeApiKeyRepository(apiKeyStore = new Map<string, ApiKey>()): {
+  apiKeys: ApiKeyRepository;
+  apiKeyStore: Map<string, ApiKey>;
+} {
+  const find = (organizationId: string, id: string): ApiKey | null => {
+    const key = apiKeyStore.get(id);
+    return key !== undefined && key.organizationId === organizationId ? key : null;
+  };
+
+  const apiKeys: ApiKeyRepository = {
+    async create(input: CreateApiKeyInput) {
+      const key: ApiKey = {
+        id: `api-key-${apiKeyStore.size + 1}`,
+        organizationId: input.organizationId,
+        name: input.name,
+        prefix: input.prefix,
+        keyHash: input.keyHash,
+        expiresAt: input.expiresAt,
+        revokedAt: null,
+        lastUsedAt: null,
+        createdAt: NOW,
+        updatedAt: NOW,
+      };
+      apiKeyStore.set(key.id, key);
+      return key;
+    },
+    async findByKeyHash(keyHash: string) {
+      return [...apiKeyStore.values()].find((key) => key.keyHash === keyHash) ?? null;
+    },
+    async findById(input: { organizationId: string; id: string }) {
+      return find(input.organizationId, input.id);
+    },
+    async listByOrganization(organizationId: string) {
+      return [...apiKeyStore.values()].filter((key) => key.organizationId === organizationId);
+    },
+    async revoke(input: { organizationId: string; id: string; revokedAt: Date }) {
+      const key = find(input.organizationId, input.id);
+      if (key === null) {
+        throw new ApiKeyNotFoundError(input.organizationId, input.id);
+      }
+      const updated = { ...key, revokedAt: input.revokedAt, updatedAt: NOW };
+      apiKeyStore.set(input.id, updated);
+      return updated;
+    },
+    async markUsed(id: string, usedAt: Date) {
+      const key = apiKeyStore.get(id);
+      if (key !== undefined) {
+        apiKeyStore.set(id, { ...key, lastUsedAt: usedAt, updatedAt: NOW });
+      }
+    },
+  };
+
+  return { apiKeys, apiKeyStore };
 }
 
 export function createFakeOutboxRepository(): {
@@ -161,6 +238,7 @@ export function createFakeRepositories(): FakeRepositories {
   const organizationStore = new Map<string, Organization>();
   const membershipStore = new Map<string, Membership>();
   const invitationStore = new Map<string, Invitation>();
+  const apiKeyStore = new Map<string, ApiKey>();
 
   const organizations: OrganizationRepository = {
     async findById(id: string) {
@@ -200,6 +278,11 @@ export function createFakeRepositories(): FakeRepositories {
       for (const [key, invitation] of invitationStore) {
         if (invitation.organizationId === id) {
           invitationStore.delete(key);
+        }
+      }
+      for (const [key, apiKey] of apiKeyStore) {
+        if (apiKey.organizationId === id) {
+          apiKeyStore.delete(key);
         }
       }
     },
@@ -333,9 +416,11 @@ export function createFakeRepositories(): FakeRepositories {
     organizations,
     memberships,
     invitations,
+    apiKeys: createFakeApiKeyRepository(apiKeyStore).apiKeys,
     organizationStore,
     membershipStore,
     invitationStore,
+    apiKeyStore,
     ...createFakeOutboxRepository(),
   };
 }
@@ -378,6 +463,13 @@ export function createFakeUnitOfWork(repos: FakeRepositories): {
       },
     },
     invitations: repos.invitations,
+    apiKeys: {
+      ...repos.apiKeys,
+      create: async (input: CreateApiKeyInput) => {
+        calls.push("apiKeys.create");
+        return repos.apiKeys.create(input);
+      },
+    },
     outbox: {
       ...repos.outbox,
       append: async (event: DomainEvent) => {

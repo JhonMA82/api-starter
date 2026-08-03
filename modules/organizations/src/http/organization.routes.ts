@@ -8,6 +8,7 @@ import { describeRoute, resolver } from "hono-openapi";
 import { z } from "zod";
 
 import { acceptInvitationUseCase } from "../application/accept-invitation";
+import { createApiKeyUseCase } from "../application/create-api-key";
 import {
   type CreateOrganizationDeps,
   createOrganizationUseCase,
@@ -16,15 +17,18 @@ import { deleteOrganizationUseCase } from "../application/delete-organization";
 import { inviteMemberUseCase } from "../application/invite-member";
 import type { OrganizationAudit } from "../application/organization-audit";
 import type {
+  ApiKeyRepository,
   InvitationRepository,
   MembershipRepository,
   OrganizationRepository,
   UnitOfWork,
 } from "../application/ports";
 import { removeMemberUseCase } from "../application/remove-member";
+import { revokeApiKeyUseCase } from "../application/revoke-api-key";
 import { suspendOrganizationUseCase } from "../application/suspend-organization";
 import type { TenancyService } from "../application/tenancy-service";
 import { transferOwnershipUseCase } from "../application/transfer-ownership";
+import type { ApiKey } from "../domain/api-key.entity";
 import type { Invitation } from "../domain/invitation.entity";
 import type { Membership } from "../domain/membership.entity";
 import type { Organization } from "../domain/organization.entity";
@@ -32,6 +36,9 @@ import type { TenantContext } from "../domain/tenant-context";
 import { toHttpException } from "./errors";
 import {
   AcceptInvitationBody,
+  ApiKeyResponse,
+  type ApiKeyResponse as ApiKeyResponseType,
+  CreateApiKeyBody,
   CreateOrganizationBody,
   InvitationResponse,
   type InvitationResponse as InvitationResponseType,
@@ -137,11 +144,25 @@ function toTenantContextResponse(tenant: TenantContext): TenantContextResponseTy
   };
 }
 
+function toApiKeyResponse(apiKey: ApiKey): ApiKeyResponseType {
+  return {
+    id: apiKey.id,
+    organizationId: apiKey.organizationId,
+    name: apiKey.name,
+    prefix: apiKey.prefix,
+    expiresAt: apiKey.expiresAt === null ? null : apiKey.expiresAt.toISOString(),
+    revokedAt: apiKey.revokedAt === null ? null : apiKey.revokedAt.toISOString(),
+    lastUsedAt: apiKey.lastUsedAt === null ? null : apiKey.lastUsedAt.toISOString(),
+    createdAt: apiKey.createdAt.toISOString(),
+  };
+}
+
 export interface OrganizationRoutesDeps {
   tenancy: TenancyService;
   organizations: OrganizationRepository;
   memberships: MembershipRepository;
   invitations: InvitationRepository;
+  apiKeys: ApiKeyRepository;
   uow: UnitOfWork | null;
   audit: OrganizationAudit | null;
 }
@@ -163,6 +184,20 @@ export function createOrganizationRoutes(
   const suspendOrganization = suspendOrganizationUseCase(deps);
   const removeMember = removeMemberUseCase(deps);
   const deleteOrganization = deleteOrganizationUseCase(deps);
+  const createApiKey = createApiKeyUseCase({
+    organizations: deps.organizations,
+    memberships: deps.memberships,
+    apiKeys: deps.apiKeys,
+    ...(deps.audit === null ? {} : { audit: deps.audit }),
+    ...(deps.uow === null ? {} : { uow: deps.uow }),
+  });
+  const revokeApiKey = revokeApiKeyUseCase({
+    organizations: deps.organizations,
+    memberships: deps.memberships,
+    apiKeys: deps.apiKeys,
+    ...(deps.audit === null ? {} : { audit: deps.audit }),
+    ...(deps.uow === null ? {} : { uow: deps.uow }),
+  });
 
   app.post(
     "/organizations",
@@ -465,6 +500,77 @@ export function createOrganizationRoutes(
         } catch {
           /* audit is best-effort */
         }
+        return c.body(null, 204);
+      } catch (error) {
+        throw toHttpException(error);
+      }
+    },
+  );
+
+  app.post(
+    "/organizations/:id/api-keys",
+    describeRoute({
+      description:
+        "Creates an organization-scoped API key; the raw secret is returned exactly once and cannot be retrieved later",
+      responses: {
+        201: {
+          description: "API key created with its one-time secret",
+          content: {
+            "application/json": {
+              schema: resolver(z.object({ apiKey: ApiKeyResponse, secret: z.string().min(32) })),
+            },
+          },
+        },
+        ...tenantResponses(),
+      },
+    }),
+    tenantContext,
+    sValidator("json", CreateApiKeyBody, validationErrorHandler),
+    async (c) => {
+      const user = c.get("user");
+      if (user === null) {
+        throw new HTTPException(401);
+      }
+      const { name, expiresAt } = c.req.valid("json");
+      try {
+        const { apiKey, secret } = await createApiKey({
+          actorUserId: user.id,
+          // The route pattern guarantees the :id segment; the middleware chain
+          // widens the path type so Hono's fallback overload returns string | undefined.
+          organizationId: c.req.param("id") as string,
+          name,
+          ...(expiresAt === undefined ? {} : { expiresAt: new Date(expiresAt) }),
+        });
+        return c.json({ apiKey: toApiKeyResponse(apiKey), secret }, 201);
+      } catch (error) {
+        throw toHttpException(error);
+      }
+    },
+  );
+
+  app.delete(
+    "/organizations/:id/api-keys/:keyId",
+    describeRoute({
+      description: "Revokes an organization-scoped API key; revoked keys can never be used again",
+      responses: {
+        204: { description: "API key revoked" },
+        ...tenantResponses(),
+      },
+    }),
+    tenantContext,
+    async (c) => {
+      const user = c.get("user");
+      if (user === null) {
+        throw new HTTPException(401);
+      }
+      try {
+        await revokeApiKey({
+          actorUserId: user.id,
+          // The route pattern guarantees the :id segment; the middleware chain
+          // widens the path type so Hono's fallback overload returns string | undefined.
+          organizationId: c.req.param("id") as string,
+          keyId: c.req.param("keyId") as string,
+        });
         return c.body(null, 204);
       } catch (error) {
         throw toHttpException(error);

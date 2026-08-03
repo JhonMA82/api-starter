@@ -69,3 +69,21 @@ export const TenantContextResponse = z.object({
   roleIds: z.array(z.string()),
 });
 export type TenantContextResponse = z.infer<typeof TenantContextResponse>;
+
+export const CreateApiKeyBody = z.object({
+  name: z.string().min(1).max(100),
+  expiresAt: z.iso.datetime().optional(),
+});
+export type CreateApiKeyBody = z.infer<typeof CreateApiKeyBody>;
+
+export const ApiKeyResponse = z.object({
+  id: z.string(),
+  organizationId: z.string(),
+  name: z.string(),
+  prefix: z.string(),
+  expiresAt: z.iso.datetime().nullable(),
+  revokedAt: z.iso.datetime().nullable(),
+  lastUsedAt: z.iso.datetime().nullable(),
+  createdAt: z.iso.datetime(),
+});
+export type ApiKeyResponse = z.infer<typeof ApiKeyResponse>;

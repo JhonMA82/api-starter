@@ -95,3 +95,17 @@ export class OrganizationDeletionRequiresConfirmationError extends Error {
     this.name = "OrganizationDeletionRequiresConfirmationError";
   }
 }
+
+export class ApiKeyNotFoundError extends Error {
+  constructor(organizationId: string, id: string) {
+    super(`Api key not found: organization ${organizationId}, key ${id}`);
+    this.name = "ApiKeyNotFoundError";
+  }
+}
+
+export class ApiKeyNameError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "ApiKeyNameError";
+  }
+}

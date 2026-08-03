@@ -1,3 +1,4 @@
+import type { ApiKey } from "../domain/api-key.entity";
 import type { DomainEvent } from "../domain/domain-events";
 import type { Invitation } from "../domain/invitation.entity";
 import type { Membership, MembershipStatus } from "../domain/membership.entity";
@@ -76,10 +77,28 @@ export interface OutboxRepository {
   pendingCount(): Promise<number>;
 }
 
+export interface CreateApiKeyInput {
+  organizationId: string;
+  name: string;
+  prefix: string;
+  keyHash: string;
+  expiresAt: Date | null;
+}
+
+export interface ApiKeyRepository {
+  create(input: CreateApiKeyInput): Promise<ApiKey>;
+  findByKeyHash(keyHash: string): Promise<ApiKey | null>;
+  findById(input: { organizationId: string; id: string }): Promise<ApiKey | null>;
+  listByOrganization(organizationId: string): Promise<ApiKey[]>;
+  revoke(input: { organizationId: string; id: string; revokedAt: Date }): Promise<ApiKey>;
+  markUsed(id: string, usedAt: Date): Promise<void>;
+}
+
 export interface UnitOfWork {
   run<T>(work: (uow: UnitOfWork) => Promise<T>): Promise<T>;
   readonly organizations: OrganizationRepository;
   readonly memberships: MembershipRepository;
   readonly invitations: InvitationRepository;
+  readonly apiKeys: ApiKeyRepository;
   readonly outbox: OutboxRepository;
 }

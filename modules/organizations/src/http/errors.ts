@@ -1,6 +1,8 @@
 import { HTTPException } from "hono/http-exception";
 
 import {
+  ApiKeyNameError,
+  ApiKeyNotFoundError,
   ForbiddenOrganizationActionError,
   InactiveMembershipError,
   InvalidOrganizationRoleError,
@@ -30,6 +32,9 @@ export function toHttpException(error: unknown): unknown {
   if (error instanceof OrganizationNotFoundError || error instanceof InvitationNotFoundError) {
     return new HTTPException(404);
   }
+  if (error instanceof ApiKeyNotFoundError) {
+    return new HTTPException(404);
+  }
   if (
     error instanceof OrganizationSuspendedError ||
     error instanceof MembershipNotFoundError ||
@@ -48,7 +53,8 @@ export function toHttpException(error: unknown): unknown {
     error instanceof InvitationExpiredError ||
     error instanceof InvitationAlreadyUsedError ||
     error instanceof OwnerConstraintError ||
-    error instanceof OrganizationDeletionRequiresConfirmationError
+    error instanceof OrganizationDeletionRequiresConfirmationError ||
+    error instanceof ApiKeyNameError
   ) {
     return new HTTPException(400);
   }

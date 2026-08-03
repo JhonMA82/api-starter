@@ -4,6 +4,15 @@ export type {
   AcceptInvitationUseCase,
 } from "./application/accept-invitation";
 export { acceptInvitationUseCase } from "./application/accept-invitation";
+export type { GeneratedApiKeySecret } from "./application/api-key-token";
+export { generateApiKeySecret, hashApiKeySecret } from "./application/api-key-token";
+export type {
+  CreateApiKeyDeps,
+  CreateApiKeyInput,
+  CreateApiKeyResult,
+  CreateApiKeyUseCase,
+} from "./application/create-api-key";
+export { createApiKeyUseCase } from "./application/create-api-key";
 export type {
   CreateOrganizationDeps,
   CreateOrganizationInput,
@@ -32,6 +41,7 @@ export type {
 } from "./application/outbox-worker";
 export { createOutboxWorker } from "./application/outbox-worker";
 export type {
+  ApiKeyRepository,
   CreateInvitationInput,
   CreateMembershipInput,
   InvitationRepository,
@@ -46,6 +56,12 @@ export type {
   RemoveMemberUseCase,
 } from "./application/remove-member";
 export { removeMemberUseCase } from "./application/remove-member";
+export type {
+  RevokeApiKeyDeps,
+  RevokeApiKeyInput,
+  RevokeApiKeyUseCase,
+} from "./application/revoke-api-key";
+export { revokeApiKeyUseCase } from "./application/revoke-api-key";
 export type {
   SuspendOrganizationDeps,
   SuspendOrganizationInput,
@@ -67,10 +83,14 @@ export type {
 } from "./application/transfer-ownership";
 export { transferOwnershipUseCase } from "./application/transfer-ownership";
 export type {
-  DomainEvent,
-  DomainEventBase,
-  DomainEventType,
-} from "./domain/domain-events";
+  VerifyApiKeyDeps,
+  VerifyApiKeyInput,
+  VerifyApiKeyUseCase,
+} from "./application/verify-api-key";
+export { verifyApiKeyUseCase } from "./application/verify-api-key";
+export type { ApiKey } from "./domain/api-key.entity";
+export { assertValidApiKeyName, isApiKeyActive } from "./domain/api-key.entity";
+export type { DomainEvent, DomainEventBase, DomainEventType } from "./domain/domain-events";
 export { createDomainEvent } from "./domain/domain-events";
 export type { Invitation } from "./domain/invitation.entity";
 export {
@@ -86,6 +106,8 @@ export {
   assertValidSlug,
 } from "./domain/organization.entity";
 export {
+  ApiKeyNameError,
+  ApiKeyNotFoundError,
   ForbiddenOrganizationActionError,
   InactiveMembershipError,
   InvalidOrganizationRoleError,
@@ -116,6 +138,12 @@ export { OutboxEventNotFoundError } from "./domain/outbox.errors";
 export type { TenantContext } from "./domain/tenant-context";
 export { createTenantContext } from "./domain/tenant-context";
 export {
+  type ApiKeyMiddlewareDeps,
+  type ApiKeyMiddlewareVariables,
+  createApiKeyMiddleware,
+  SESSION_COOKIE_NAME,
+} from "./http/api-key-middleware";
+export {
   createOrganizationRoutes,
   type OrganizationRoutesDeps,
 } from "./http/organization.routes";
@@ -126,6 +154,7 @@ export {
   type TenantMiddlewareDeps,
 } from "./http/tenant-middleware";
 export {
+  createApiKeyRepository,
   createClient,
   createDb,
   createInvitationRepository,
@@ -134,5 +163,6 @@ export {
   createOutboxRepository,
   createUnitOfWork,
 } from "./infrastructure";
+export { apiKeySchema } from "./infrastructure/api-key.schema";
 export { organizationSchema } from "./infrastructure/organization.schema";
 export { outboxSchema } from "./infrastructure/outbox.schema";

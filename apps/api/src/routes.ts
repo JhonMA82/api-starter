@@ -9,6 +9,7 @@ import {
 } from "@consulting/contracts";
 import { exampleRoutes } from "@consulting/module-example";
 import {
+  type ApiKeyRepository,
   createOrganizationAudit,
   createOrganizationRoutes,
   createTenancyService,
@@ -47,6 +48,7 @@ export interface OrganizationsHttpOptions {
     organizations: OrganizationRepository;
     memberships: MembershipRepository;
     invitations: InvitationRepository;
+    apiKeys: ApiKeyRepository;
     uow: UnitOfWork | null;
   };
   audit?: AuditLogger;
