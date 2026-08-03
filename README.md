@@ -1,6 +1,6 @@
 # @consulting/api-starter
 
-Plantilla reutilizable de API HTTP en **Bun 1.3.14 + Hono**, organizada como monolito modular con workspaces. Incluye validación de configuración fail-fast, modelo de errores RFC 9457, contratos OpenAPI 3.1 generados desde schemas zod, logger estructurado JSON, imagen Docker multi-stage no-root, persistencia PostgreSQL con Drizzle (Fase 2), autenticación con Better Auth (Fase 3), autorización deny-by-default y auditoría append-only (Fase 4), multi-tenancy con organizaciones, membresías e invitaciones (Fase 5), CI de 8 jobs y tests con umbral de cobertura.
+Plantilla reutilizable de API HTTP en **Bun 1.3.14 + Hono**, organizada como monolito modular con workspaces. Incluye validación de configuración fail-fast, modelo de errores RFC 9457, contratos OpenAPI 3.1 generados desde schemas zod, logger estructurado JSON, imagen Docker multi-stage no-root, persistencia PostgreSQL con Drizzle (Fase 2), autenticación con Better Auth (Fase 3), autorización deny-by-default y auditoría append-only (Fase 4), multi-tenancy con organizaciones, membresías e invitaciones (Fase 5), integraciones: outbox transaccional, cola de jobs, API keys y webhooks firmados (Fase 6), CI de 8 jobs y tests con umbral de cobertura.
 
 ## Quickstart
 
@@ -114,6 +114,30 @@ invitaciones con roles predefinidos (`owner`/`admin`/`auditor`/`member`).
   vía `createOrganizationAudit` sobre `@consulting/audit`; es best-effort y
   nunca rompe la operación.
 
+### Integraciones (Fase 6)
+
+Perfil de integraciones (spec §14, ADR-0008): efectos de dominio fiables
+hacia el exterior, API keys por organización y webhooks firmados.
+
+- **Outbox transaccional:** los eventos de dominio se emiten **dentro** de la
+  misma transacción que la escritura de negocio (`outbox_events`, migración
+  0005, dedupe por `event_id`); un worker los entrega de forma fiable.
+- **JobQueue:** `modules/jobs` (tabla `jobs`, migración 0006) con adaptador
+  PostgreSQL para producción y adaptador en memoria para tests; el outbox
+  worker reintenta con backoff exponencial, pasa a dead-letter tras 5
+  intentos y permite reproceso controlado.
+- **API keys por organización:** almacenamiento solo-hash (sha256), secreto
+  mostrado una sola vez al crear, expiración/revocación y autenticación
+  bearer (la cookie de sesión tiene precedencia). Viven en
+  `modules/organizations`.
+- **Webhooks salientes:** entregas firmadas con HMAC (`x-webhook-signature`)
+  con timestamp, id del evento y `idempotency-key`; payloads redactados,
+  reintentos exponenciales e historial de entregas.
+- **Webhooks entrantes:** ruta pública firmada
+  `POST /api/v1/webhooks/incoming/:provider` que verifica la firma antes de
+  parsear, deduplica por (provider, event id) a nivel de base de datos y
+  encola el procesamiento de forma asíncrona.
+
 ### Desarrollo
 
 ```bash
@@ -142,6 +166,14 @@ Arranca `apps/api/src/server.ts` en modo watch. El servidor responde en `http://
 | POST | `/api/v1/organizations/:id/suspend` | Suspende la organización (los miembros pierden acceso) |
 | DELETE | `/api/v1/organizations/:id/members/:userId` | Elimina un miembro (el último owner no puede eliminarse) |
 | DELETE | `/api/v1/organizations/:id?confirm=true` | Borra la organización tras confirmación fuerte (cascada) |
+| POST | `/api/v1/organizations/:id/api-keys` | Crea una API key (owner/admin); devuelve el secreto de un solo uso |
+| DELETE | `/api/v1/organizations/:id/api-keys/:keyId` | Revoca una API key (owner/admin) |
+| POST | `/api/v1/organizations/:id/webhooks` | Registra un webhook saliente (owner/admin); secreto de firma mostrado una sola vez |
+| GET | `/api/v1/organizations/:id/webhooks` | Lista los webhooks salientes del tenant |
+| POST | `/api/v1/organizations/:id/webhooks/:webhookId/rotate` | Rota el secreto de firma de un webhook (secreto nuevo de un solo uso) |
+| POST | `/api/v1/organizations/:id/webhooks/:webhookId/toggle` | Activa/desactiva un webhook saliente |
+| GET | `/api/v1/organizations/:id/webhooks/:webhookId/deliveries` | Historial de entregas de un webhook |
+| POST | `/api/v1/webhooks/incoming/:provider` | Webhook entrante público firmado con HMAC (202 aceptado/duplicado, 401 firma inválida, 404 proveedor desconocido) |
 | GET | `/api/v1/example/hello?name=...` | Módulo de ejemplo (demuestra la estructura por capas) |
 
 Los errores se devuelven como `application/problem+json` (RFC 9457) con `code`, `requestId` e `instance`.
@@ -196,7 +228,7 @@ api/
 ├─ bunfig.toml             umbral de cobertura 0.8
 ├─ catalog/dependencies.json   registro de dependencias (versión, licencia, propósito)
 ├─ docs/architecture.md    visión, capas, matriz de portabilidad (español)
-├─ docs/decisions/         ADR 0001–0007 (inglés)
+├─ docs/decisions/         ADR 0001–0008 (inglés)
 ├─ docs/migrations-runbook.md   runbook de migraciones (español)
 ├─ migrations/             migraciones SQL commitadas + snapshots (drizzle-kit)
 ├─ scripts/db/             runners de migración y seeds (db:migrate, db:seed)
@@ -210,8 +242,9 @@ api/
 ├─ packages/audit/         log de auditoría append-only (tabla + trigger + API record/list)
 └─ modules/
    ├─ example/             módulo de ejemplo por capas (domain/application/http)
+   ├─ jobs/                cola de jobs JobQueue + worker del outbox (adaptador PostgreSQL; in-memory solo para tests) (Fase 6)
    ├─ notes/               módulo de referencia con persistencia (Fase 2)
-   └─ organizations/       cluster multi-tenant: organizaciones/membresías/invitaciones (Fase 5)
+   └─ organizations/       cluster multi-tenant: organizaciones/membresías/invitaciones (Fase 5) + integraciones: outbox, API keys y webhooks (Fase 6)
 ```
 
 ## Convenciones

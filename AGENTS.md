@@ -23,6 +23,7 @@ Convenciones del repositorio para agentes de IA y colaboradores humanos.
 - `modules/*`: **sin** importaciones de `@consulting/auth` ni `@consulting/auth-client`; tampoco importan `@consulting/authorization` para decidir permisos en repositorios (la decisión vive en http vía `requirePermission`). `modules/organizations` (cluster de tenant: organizaciones/membresías/invitaciones) sí puede importar `@consulting/audit` para la auditoría por tenant.
 - `modules/*/src/domain` y `modules/*/src/application`: **sin** Hono ni Bun.
 - Recursos de tenant: las búsquedas tenant-scoped siempre llevan `organizationId` (nunca ids desnudos para membresías/invitaciones); las invitaciones se resuelven por hash del token.
+- Integraciones (Fase 6): `modules/*` pueden usar `node:crypto` para hashing (API keys) y firmas HMAC (webhooks); el secreto de los endpoints de webhooks salientes se guarda en texto plano por diseño (`webhook_endpoints.secret`, nunca se devuelve en respuestas); el cluster de integraciones vive en `modules/organizations` (outbox, API keys, webhooks) + `modules/jobs` (JobQueue, worker del outbox).
 - `apps/api/src/server.ts` es el **único** archivo de producción que toca APIs de Bun.
 - Rutas de negocio se montan bajo `/api/v1`.
 - Errores: RFC 9457 (`application/problem+json`), siempre con `code`, `requestId`, `instance`; nunca filtrar stack traces ni internos.

@@ -142,6 +142,63 @@ siempre acotan por tenant. Ver ADR-0007.
   importar `@consulting/auth`); `modules/organizations` puede importar
   `@consulting/audit` (tipos y API de registro) desde la capa http/application.
 
+## Integraciones (Fase 6)
+
+El perfil de integraciones responde a *cómo se comunican los efectos de
+dominio con el mundo exterior de forma fiable* (spec §13.2, §14.1-14.6,
+§10.x): outbox transaccional, cola de jobs, API keys por organización y
+webhooks firmados. Ver ADR-0008.
+
+- **Outbox transaccional + eventos de dominio** (§14.3): tabla
+  `outbox_events` (migración 0005) con status
+  pending/processing/succeeded/failed/dead_letter, `attempts`,
+  `max_attempts` (5), `last_error` y `next_attempt_at`; `OutboxRepository`
+  (append con dedupe por `event_id`, `findPendingDue`,
+  `markProcessing`/`markSucceeded`/`markFailed` con backoff exponencial,
+  `reprocess`, `listByStatus`); eventos de dominio (organization.created,
+  member.invited, invitation.accepted, ownership.transferred,
+  organization.suspended, organization.deleted, member.removed,
+  api_key.created, api_key.revoked); `create-organization` emite
+  `organization.created` **dentro** de la misma transacción UnitOfWork
+  (§9.5).
+- **JobQueue + worker** (§14.4): `modules/jobs` con la tabla `jobs`
+  (migración 0006), la interfaz `JobQueue` (enqueue/schedule/cancel), un
+  adaptador PostgreSQL y un adaptador en memoria (solo tests); outbox worker
+  (poll, handlers por evento, reintentos con backoff exponencial
+  `1s · 2^attempts` con tope 1h, dead-letter tras `max_attempts`, reproceso
+  controlado).
+- **API keys** (§10.x, §13.2): tabla `api_keys` (migración 0007) con
+  almacenamiento solo-hash (sha256), prefijo de 8 caracteres, `expires_at`,
+  `revoked_at`, `last_used_at`; tenant-scoped con cascada al borrar la
+  organización; casos de uso create/revoke/verify (owner/admin, secreto de
+  un solo uso) y middleware bearer de api-key (la cookie de sesión tiene
+  precedencia); eventos `api_key.created`/`api_key.revoked` + entradas de
+  auditoría.
+- **Webhooks salientes** (§14.5): tablas `webhook_endpoints` +
+  `webhook_deliveries` (migración 0008); casos de uso
+  register/rotate/list/toggle (owner/admin, secreto de un solo uso al crear
+  y al rotar); entregas firmadas con HMAC — cabeceras
+  `x-webhook-signature: sha256=<hex>` sobre `timestamp + "." + body`,
+  `x-webhook-timestamp` (segundos unix), `x-webhook-event-id`,
+  `x-webhook-event-type` e `idempotency-key`; payloads redactados (strip
+  recursivo de claves password/secret/token/authorization/api-key);
+  reintentos con backoff exponencial; historial de entregas; fan-out del
+  handler del outbox a los endpoints suscritos. El secreto del endpoint se
+  guarda en texto plano en `webhook_endpoints.secret` — credencial de
+  integración del lado del servidor necesaria para firmar, nunca devuelta en
+  respuestas (decisión documentada).
+- **Webhooks entrantes** (§14.6): helper compartido de firma HMAC
+  (verificación timing-safe, ventana de 5 minutos); tabla
+  `incoming_webhooks` (migración 0009) con unicidad `(provider, event_id)`
+  a nivel de base de datos; caso de uso receive (verificar firma **antes**
+  de parsear, payloads almacenados redactados, cuerpo crudo conservado como
+  `{ raw }` si no parsea, encolar procesamiento asíncrono vía JobQueue,
+  auditoría `webhook.received`); ruta pública
+  `POST /api/v1/webhooks/incoming/:provider` — 202 aceptado/duplicado, 401
+  firma inválida (nada se almacena), 404 proveedor desconocido (la
+  existencia no se revela); secretos de proveedor en un `Map` estático
+  (almacén de secretos en DB documentado como mejora futura).
+
 ## Perfiles y fases futuras (resumen)
 
 - **Fase 0+1 (completada):** fundación — registros, ADRs, núcleo HTTP con rutas base, OpenAPI 3.1 + Scalar, módulo de ejemplo, Docker y CI de 5 jobs.
@@ -149,7 +206,8 @@ siempre acotan por tenant. Ver ADR-0007.
 - **Fase 3 (completada, autenticación):** Better Auth 1.6.25 aislado en `packages/auth` (`@consulting/auth`) con adaptador drizzle (migración 0002: `user`/`session`/`account`/`verification`), email/contraseña y plugins `bearer()`/openAPI; cliente browser-safe `packages/auth-client`; montaje de `/api/auth/*` y middleware de sesión vía la costura `createApp(config, { auth })`; tests de DB reales y extensión de CI. Ver [Autenticación (Fase 3)](#autenticación-fase-3).
 - **Fase 4 (completada, autorización single-tenant):** catálogo explícito de permisos `request.*`, roles admin/reviewer/member y políticas ABAC en `packages/authorization` (deny by default); enforcement HTTP con `requirePermission` y la costura `getRoles` (códigos `401 UNAUTHORIZED` / `403 FORBIDDEN`, rutas demo `/api/v1/authorization/*`); auditoría append-only `audit_log` (migración 0003) con trigger de base de datos en `packages/audit`. Ver [Autorización (Fase 4)](#autorización-fase-4).
 - **Fase 5 (completada, multi-tenancy):** `modules/organizations` (organizaciones/membresías/invitaciones, migración 0004) con shared schema; roles de org predefinidos (owner/admin/auditor/member); `TenantContext` + flujo de resolución con `x-organization-id`; repositorios tenant-scoped con protección IDOR; ciclo de vida completo (crear/invitar/aceptar/transferir/suspender/eliminar miembro/borrar con confirmación) e invariantes (§11.8); auditoría por tenant sobre `packages/audit` y ADR-0007. Ver [Multi-tenancy (Fase 5)](#multi-tenancy-fase-5).
-- **Fases posteriores:** sin comprometer detalles concretos — la Fase 6 será integraciones (outbox, worker, webhooks, API keys) sobre los perfiles multi-tenant y single-tenant actuales; además se prevé crecimiento hacia rutas HTTP del módulo `notes` y más módulos de negocio bajo `/api/v1`, junto con la revisión de decisiones que lo requieran (p.ej. manejo de secretos, gate de capas automatizado).
+- **Fase 6 (completada, integraciones):** outbox transaccional + eventos de dominio (migración 0005), `modules/jobs` con la JobQueue (adaptador PostgreSQL; in-memory solo para tests) + outbox worker con backoff/dead-letter/reproceso (migración 0006), API keys por organización con almacenamiento solo-hash (migración 0007), webhooks salientes firmados con HMAC (migración 0008) y webhooks entrantes verify-first con dedupe por provider+event id (migración 0009). Ver [Integraciones (Fase 6)](#integraciones-fase-6) y ADR-0008.
+- **Fase 7 (archivos):** siguiente fase planificada — storage adapter, signed URLs, mailer y templates; además se prevé crecimiento hacia rutas HTTP del módulo `notes` y más módulos de negocio bajo `/api/v1`, junto con la revisión de decisiones que lo requieran (p.ej. manejo de secretos, gate de capas automatizado).
 - **Perfil Docker `core`:** solo el servicio `api`. La base de datos vive en el perfil `database` (postgres) y no es un requisito del servidor HTTP.
 
 ## Modelo de datos y errores

@@ -5,6 +5,37 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.6.0] - 2026-08-03
+
+### Added
+
+- Integrations (Fase 6): transactional outbox (`outbox_events`, migration
+  0005) with same-transaction domain event emission (dedupe by `event_id`,
+  statuses pending/processing/succeeded/failed/dead_letter, max 5 attempts,
+  exponential backoff, controlled reprocessing).
+- `modules/jobs` JobQueue (`jobs` table, migration 0006) with PostgreSQL and
+  in-memory (tests-only) adapters, plus the outbox worker (polling,
+  per-event handlers, `1s · 2^attempts` backoff capped at 1h, dead-lettering
+  after max attempts).
+- Organization API keys (migration 0007): hash-only storage (sha256 +
+  8-char prefix), one-time secret at creation, expiry/revocation/last-used
+  tracking, tenant-scoped with cascade on organization delete, bearer
+  middleware (session cookie takes precedence), `api_key.created`/
+  `api_key.revoked` domain events and audit entries.
+- Outgoing webhooks (`webhook_endpoints`/`webhook_deliveries`, migration
+  0008): HMAC-signed deliveries (`x-webhook-signature`,
+  `x-webhook-timestamp`, `x-webhook-event-id`, `x-webhook-event-type`,
+  `idempotency-key`), payload redaction, exponential retry backoff,
+  delivery history, and outbox fan-out to subscribed endpoints.
+- Incoming webhooks (`incoming_webhooks`, migration 0009): verify-before-
+  parse HMAC signature (timing-safe, 5-minute window), DB-level
+  `(provider, event_id)` idempotency, redacted stored payloads, async
+  processing via the JobQueue, `webhook.received` audit, and public route
+  `POST /api/v1/webhooks/incoming/:provider` (202 accepted/duplicate, 401
+  bad signature, 404 unknown provider).
+- ADR-0008 (integrations: transactional outbox, job queue, API keys,
+  webhooks).
+
 ## [0.5.0] - 2026-08-03
 
 ### Added
