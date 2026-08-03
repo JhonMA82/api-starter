@@ -7,6 +7,7 @@
     ".": "./src/app.ts"
   },
   "dependencies": {
+    "@consulting/audit": "workspace:*",
     "@consulting/auth": "workspace:*",
     "@consulting/authorization": "workspace:*",
     "@consulting/config": "workspace:*",

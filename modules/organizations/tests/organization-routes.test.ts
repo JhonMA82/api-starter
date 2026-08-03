@@ -1,10 +1,12 @@
 import { describe, expect, test } from "bun:test";
+import type { AuditLogger } from "@consulting/audit";
 import type { Config } from "@consulting/config";
 import type { Context } from "hono";
 
 import { createApp } from "../../../apps/api/src/app";
 import { hashInvitationToken } from "../src/application/token";
 import {
+  createFakeAudit,
   createFakeRepositories,
   type FakeRepositories,
   makeMembership,
@@ -58,7 +60,7 @@ type TestContext = {
   repos: FakeRepositories;
 };
 
-function appWithAuth(auth: StubAuth, repos: FakeRepositories) {
+function appWithAuth(auth: StubAuth, repos: FakeRepositories, audit?: AuditLogger) {
   return createApp(config, {
     auth,
     organizations: {
@@ -68,6 +70,7 @@ function appWithAuth(auth: StubAuth, repos: FakeRepositories) {
         invitations: repos.invitations,
         uow: null,
       },
+      ...(audit === undefined ? {} : { audit }),
     },
   });
 }
@@ -629,5 +632,216 @@ describe("DELETE /api/v1/organizations/:id", () => {
 
     expect(res.status).toBe(403);
     expect(await problem(res)).toMatchObject({ status: 403, code: "FORBIDDEN" });
+  });
+});
+
+describe("audit logging", () => {
+  test("records organization.created when an organization is created", async () => {
+    const repos = createFakeRepositories();
+    const { audit, records } = createFakeAudit();
+    const app = appWithAuth(stubAuth(OWNER), repos, audit);
+
+    const res = await app.request(
+      "/api/v1/organizations",
+      jsonRequest({
+        cookie: SESSION_COOKIE,
+        body: { name: "Acme Inc", slug: "acme-inc" },
+      }),
+    );
+
+    expect(res.status).toBe(201);
+    expect(records).toContainEqual({
+      actorUserId: "user-1",
+      action: "organization.created",
+      resourceType: "organization",
+      resourceId: "org-1",
+      outcome: "success",
+    });
+  });
+
+  test("records organization.suspended when an organization is suspended", async () => {
+    const repos = createFakeRepositories();
+    repos.organizationStore.set("org-1", makeOrganization({ id: "org-1", slug: "acme-inc" }));
+    repos.membershipStore.set(
+      "membership-1",
+      makeMembership({ id: "membership-1", userId: OWNER.id, role: "owner" }),
+    );
+    const { audit, records } = createFakeAudit();
+    const app = appWithAuth(stubAuth(OWNER), repos, audit);
+
+    const res = await app.request(
+      "/api/v1/organizations/org-1/suspend",
+      orgRequest("org-1", {
+        cookie: SESSION_COOKIE,
+      }),
+    );
+
+    expect(res.status).toBe(200);
+    expect(records).toContainEqual({
+      actorUserId: "user-1",
+      action: "organization.suspended",
+      resourceType: "organization",
+      resourceId: "org-1",
+      outcome: "success",
+    });
+  });
+
+  test("records member.invited when a member is invited", async () => {
+    const repos = createFakeRepositories();
+    repos.organizationStore.set("org-1", makeOrganization({ id: "org-1", slug: "acme-inc" }));
+    repos.membershipStore.set(
+      "membership-1",
+      makeMembership({ id: "membership-1", userId: OWNER.id, role: "owner" }),
+    );
+    const { audit, records } = createFakeAudit();
+    const app = appWithAuth(stubAuth(OWNER), repos, audit);
+
+    const res = await app.request(
+      "/api/v1/organizations/org-1/invitations",
+      orgRequest("org-1", {
+        cookie: SESSION_COOKIE,
+        body: { email: "invitee@example.com", role: "member" },
+      }),
+    );
+
+    expect(res.status).toBe(201);
+    expect(records).toContainEqual({
+      actorUserId: "user-1",
+      action: "member.invited",
+      resourceType: "organization",
+      resourceId: "org-1",
+      outcome: "success",
+      metadata: { email: "invitee@example.com" },
+    });
+  });
+
+  test("records invitation.accepted when an invitation is accepted", async () => {
+    const repos = createFakeRepositories();
+    repos.organizationStore.set("org-1", makeOrganization({ id: "org-1", slug: "acme-inc" }));
+    await repos.invitations.create({
+      organizationId: "org-1",
+      email: "invitee@example.com",
+      role: "member",
+      tokenHash: hashInvitationToken("a".repeat(64)),
+      expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+    });
+    const { audit, records } = createFakeAudit();
+    const app = appWithAuth(stubAuth(MEMBER), repos, audit);
+
+    const res = await app.request(
+      "/api/v1/organizations/accept-invitation",
+      jsonRequest({ cookie: SESSION_COOKIE, body: { token: "a".repeat(64) } }),
+    );
+
+    expect(res.status).toBe(200);
+    expect(records).toContainEqual({
+      actorUserId: "user-2",
+      action: "invitation.accepted",
+      resourceType: "organization",
+      resourceId: "org-1",
+      outcome: "success",
+      metadata: { email: "invitee@example.com" },
+    });
+  });
+
+  test("records ownership.transferred when ownership changes hands", async () => {
+    const repos = createFakeRepositories();
+    repos.organizationStore.set("org-1", makeOrganization({ id: "org-1", slug: "acme-inc" }));
+    repos.membershipStore.set(
+      "membership-1",
+      makeMembership({ id: "membership-1", userId: OWNER.id, role: "owner" }),
+    );
+    repos.membershipStore.set(
+      "membership-2",
+      makeMembership({ id: "membership-2", userId: MEMBER.id, role: "member" }),
+    );
+    const { audit, records } = createFakeAudit();
+    const app = appWithAuth(stubAuth(OWNER), repos, audit);
+
+    const res = await app.request(
+      "/api/v1/organizations/org-1/ownership",
+      orgRequest("org-1", {
+        cookie: SESSION_COOKIE,
+        body: { newOwnerUserId: "user-2" },
+      }),
+    );
+
+    expect(res.status).toBe(200);
+    expect(records).toContainEqual({
+      actorUserId: "user-1",
+      action: "ownership.transferred",
+      resourceType: "organization",
+      resourceId: "org-1",
+      outcome: "success",
+      metadata: { previousOwnerUserId: "user-1", newOwnerUserId: "user-2" },
+    });
+  });
+
+  test("records member.removed when a member is removed", async () => {
+    const repos = createFakeRepositories();
+    repos.organizationStore.set("org-1", makeOrganization({ id: "org-1", slug: "acme-inc" }));
+    repos.membershipStore.set(
+      "membership-1",
+      makeMembership({ id: "membership-1", userId: OWNER.id, role: "owner" }),
+    );
+    repos.membershipStore.set(
+      "membership-2",
+      makeMembership({ id: "membership-2", userId: MEMBER.id, role: "member" }),
+    );
+    const { audit, records } = createFakeAudit();
+    const app = appWithAuth(stubAuth(OWNER), repos, audit);
+
+    const res = await app.request(
+      "/api/v1/organizations/org-1/members/user-2",
+      orgRequest("org-1", { method: "DELETE", cookie: SESSION_COOKIE }),
+    );
+
+    expect(res.status).toBe(204);
+    expect(records).toContainEqual({
+      actorUserId: "user-1",
+      action: "member.removed",
+      resourceType: "organization",
+      resourceId: "org-1",
+      outcome: "success",
+      metadata: { targetUserId: "user-2" },
+    });
+  });
+
+  test("records organization.deleted when an organization is deleted", async () => {
+    const repos = createFakeRepositories();
+    repos.organizationStore.set("org-1", makeOrganization({ id: "org-1", slug: "acme-inc" }));
+    repos.membershipStore.set(
+      "membership-1",
+      makeMembership({ id: "membership-1", userId: OWNER.id, role: "owner" }),
+    );
+    const { audit, records } = createFakeAudit();
+    const app = appWithAuth(stubAuth(OWNER), repos, audit);
+
+    const res = await app.request(
+      "/api/v1/organizations/org-1?confirm=true",
+      orgRequest("org-1", { method: "DELETE", cookie: SESSION_COOKIE }),
+    );
+
+    expect(res.status).toBe(204);
+    expect(records).toContainEqual({
+      actorUserId: "user-1",
+      action: "organization.deleted",
+      resourceType: "organization",
+      resourceId: "org-1",
+      outcome: "success",
+    });
+  });
+
+  test("keeps working when audit is not provided", async () => {
+    const { app } = setup();
+
+    const res = await app.request(
+      "/api/v1/organizations/org-1/suspend",
+      orgRequest("org-1", {
+        cookie: SESSION_COOKIE,
+      }),
+    );
+
+    expect(res.status).toBe(200);
   });
 });

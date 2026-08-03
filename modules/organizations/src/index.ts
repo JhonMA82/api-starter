@@ -1,5 +1,6 @@
 export type {
   AcceptInvitationInput,
+  AcceptInvitationResult,
   AcceptInvitationUseCase,
 } from "./application/accept-invitation";
 export { acceptInvitationUseCase } from "./application/accept-invitation";
@@ -22,6 +23,8 @@ export type {
   InviteMemberUseCase,
 } from "./application/invite-member";
 export { inviteMemberUseCase } from "./application/invite-member";
+export type { OrganizationAudit } from "./application/organization-audit";
+export { createOrganizationAudit } from "./application/organization-audit";
 export type {
   CreateInvitationInput,
   CreateMembershipInput,

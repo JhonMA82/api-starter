@@ -5,6 +5,32 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.5.0] - 2026-08-03
+
+### Added
+
+- Multi-tenancy (Fase 5): `modules/organizations` (organizations/memberships/
+  invitations cluster, migration 0004) with a shared-schema model —
+  tenant rows carry `organization_id`, repositories scope every query to the
+  tenant, and `x-organization-id` drives the mandatory resolution flow
+  (`TenantContext` + tenancy service; unknown organizations 404 vs suspended/
+  inactive memberships 403).
+- Predefined organization roles (`owner`/`admin`/`auditor`/`member`) as a
+  membership column, single-owner invariant with a last-owner guard, and
+  deferred dynamic role tables (ADR-0007).
+- Tenant-scoped repositories with IDOR protection (`{ organizationId, id }`
+  filters; invitations resolved by global token hash) and IDOR tests.
+- Lifecycle use cases and HTTP routes (create, tenant context, invite,
+  accept-invitation, transfer ownership, suspend, remove member, delete with
+  strong confirmation) and lifecycle invariants (last-owner guard,
+  invitation expiry/single-use, cascade deletion).
+- Per-tenant audit via `@consulting/audit`: every lifecycle success records
+  `resourceType: "organization"` + `resourceId` + actor + outcome through
+  `createOrganizationAudit`, best-effort so audit never breaks the business
+  operation; real-DB assertions in the tenancy integration test.
+- ADR-0007 (multi-tenancy, shared schema); CP-B coverage extension for
+  organizations infrastructure (no-DB coverage ignores infra + test fakes).
+
 ## [0.4.0] - 2026-08-03
 
 ### Added

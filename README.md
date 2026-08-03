@@ -1,6 +1,6 @@
 # @consulting/api-starter
 
-Plantilla reutilizable de API HTTP en **Bun 1.3.14 + Hono**, organizada como monolito modular con workspaces. Incluye validación de configuración fail-fast, modelo de errores RFC 9457, contratos OpenAPI 3.1 generados desde schemas zod, logger estructurado JSON, imagen Docker multi-stage no-root, persistencia PostgreSQL con Drizzle (Fase 2), autenticación con Better Auth (Fase 3), autorización deny-by-default y auditoría append-only (Fase 4), CI de 8 jobs y tests con umbral de cobertura.
+Plantilla reutilizable de API HTTP en **Bun 1.3.14 + Hono**, organizada como monolito modular con workspaces. Incluye validación de configuración fail-fast, modelo de errores RFC 9457, contratos OpenAPI 3.1 generados desde schemas zod, logger estructurado JSON, imagen Docker multi-stage no-root, persistencia PostgreSQL con Drizzle (Fase 2), autenticación con Better Auth (Fase 3), autorización deny-by-default y auditoría append-only (Fase 4), multi-tenancy con organizaciones, membresías e invitaciones (Fase 5), CI de 8 jobs y tests con umbral de cobertura.
 
 ## Quickstart
 
@@ -92,6 +92,28 @@ ABAC (`canUpdateRequest`, `canApproveRequest`, `canDeleteRequest`).
   append-only (migración 0003) protegida por trigger a nivel de base de datos;
   API `record(input)` / `list({ limit? })` sin borrado.
 
+### Multi-tenancy (Fase 5)
+
+Perfil multi-tenant con **shared schema** (una base de datos, filas por tenant)
+en el módulo `modules/organizations`: organizaciones, membresías e
+invitaciones con roles predefinidos (`owner`/`admin`/`auditor`/`member`).
+
+- **Contexto de tenant:** cada petición tenant-scoped viaja con la cabecera
+  `x-organization-id`; el middleware resuelve `TenantContext` (organización +
+  membresía + rol) antes del handler. Organización desconocida → `404`, sin
+  membresía activa u organización suspendida → `403`.
+- **Repositorios tenant-scoped:** toda búsqueda lleva `{ organizationId, id }`
+  (las invitaciones se resuelven por hash del token); tests IDOR prueban el
+  aislamiento cross-tenant.
+- **Ciclo de vida:** crear organización, invitar por email (token de un solo
+  uso), aceptar invitación, transferir propiedad, suspender, eliminar miembro y
+  borrar con confirmación fuerte (`confirm=true`). Invariantes: guard del
+  último owner, expiración/no-reutilización de invitaciones.
+- **Auditoría por tenant:** cada éxito del ciclo de vida registra una fila en
+  `audit_log` (`resourceType: "organization"`, `resourceId`, actor y outcome)
+  vía `createOrganizationAudit` sobre `@consulting/audit`; es best-effort y
+  nunca rompe la operación.
+
 ### Desarrollo
 
 ```bash
@@ -112,6 +134,14 @@ Arranca `apps/api/src/server.ts` en modo watch. El servidor responde en `http://
 | GET/POST | `/api/auth/*` | Autenticación Better Auth: registro, sesión, sign-out, revocación, bearer |
 | GET | `/api/v1/authorization/protected` | Ruta demo protegida por permiso `request.read` (requiere sesión) |
 | GET | `/api/v1/authorization/admin` | Ruta demo protegida por permiso `request.delete` (solo rol admin) |
+| POST | `/api/v1/organizations` | Crea una organización propiedad del usuario autenticado |
+| GET | `/api/v1/organizations/:id` | Contexto de tenant del llamante (requiere `x-organization-id`) |
+| POST | `/api/v1/organizations/:id/invitations` | Invita por email; devuelve el token de un solo uso |
+| POST | `/api/v1/organizations/accept-invitation` | Acepta una invitación con su token y entra a la organización |
+| POST | `/api/v1/organizations/:id/ownership` | Transfiere la propiedad a otro miembro |
+| POST | `/api/v1/organizations/:id/suspend` | Suspende la organización (los miembros pierden acceso) |
+| DELETE | `/api/v1/organizations/:id/members/:userId` | Elimina un miembro (el último owner no puede eliminarse) |
+| DELETE | `/api/v1/organizations/:id?confirm=true` | Borra la organización tras confirmación fuerte (cascada) |
 | GET | `/api/v1/example/hello?name=...` | Módulo de ejemplo (demuestra la estructura por capas) |
 
 Los errores se devuelven como `application/problem+json` (RFC 9457) con `code`, `requestId` e `instance`.
@@ -166,7 +196,7 @@ api/
 ├─ bunfig.toml             umbral de cobertura 0.8
 ├─ catalog/dependencies.json   registro de dependencias (versión, licencia, propósito)
 ├─ docs/architecture.md    visión, capas, matriz de portabilidad (español)
-├─ docs/decisions/         ADR 0001–0006 (inglés)
+├─ docs/decisions/         ADR 0001–0007 (inglés)
 ├─ docs/migrations-runbook.md   runbook de migraciones (español)
 ├─ migrations/             migraciones SQL commitadas + snapshots (drizzle-kit)
 ├─ scripts/db/             runners de migración y seeds (db:migrate, db:seed)
@@ -180,7 +210,8 @@ api/
 ├─ packages/audit/         log de auditoría append-only (tabla + trigger + API record/list)
 └─ modules/
    ├─ example/             módulo de ejemplo por capas (domain/application/http)
-   └─ notes/               módulo de referencia con persistencia (Fase 2)
+   ├─ notes/               módulo de referencia con persistencia (Fase 2)
+   └─ organizations/       cluster multi-tenant: organizaciones/membresías/invitaciones (Fase 5)
 ```
 
 ## Convenciones

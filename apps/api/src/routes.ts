@@ -1,3 +1,4 @@
+import type { AuditLogger } from "@consulting/audit";
 import type { AuthVariables } from "@consulting/auth";
 import type { Config } from "@consulting/config";
 import {
@@ -8,6 +9,7 @@ import {
 } from "@consulting/contracts";
 import { exampleRoutes } from "@consulting/module-example";
 import {
+  createOrganizationAudit,
   createOrganizationRoutes,
   createTenancyService,
   type InvitationRepository,
@@ -47,6 +49,7 @@ export interface OrganizationsHttpOptions {
     invitations: InvitationRepository;
     uow: UnitOfWork | null;
   };
+  audit?: AuditLogger;
 }
 
 export function createRoutes(
@@ -115,6 +118,10 @@ export function createRoutes(
     const organizationsRoutes = createOrganizationRoutes({
       tenancy: createTenancyService(options.organizations.repositories),
       ...options.organizations.repositories,
+      audit:
+        options.organizations.audit === undefined
+          ? null
+          : createOrganizationAudit(options.organizations.audit),
     });
     app.route("/api/v1", organizationsRoutes);
   }

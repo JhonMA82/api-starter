@@ -14,6 +14,7 @@ import {
 } from "../application/create-organization";
 import { deleteOrganizationUseCase } from "../application/delete-organization";
 import { inviteMemberUseCase } from "../application/invite-member";
+import type { OrganizationAudit } from "../application/organization-audit";
 import type {
   InvitationRepository,
   MembershipRepository,
@@ -142,6 +143,7 @@ export interface OrganizationRoutesDeps {
   memberships: MembershipRepository;
   invitations: InvitationRepository;
   uow: UnitOfWork | null;
+  audit: OrganizationAudit | null;
 }
 
 export function createOrganizationRoutes(
@@ -184,6 +186,11 @@ export function createOrganizationRoutes(
       const { name, slug } = c.req.valid("json");
       try {
         const organization = await createOrganization({ name, slug, ownerUserId: user.id });
+        try {
+          await deps.audit?.organizationCreated(user.id, organization.id);
+        } catch {
+          /* audit is best-effort */
+        }
         return c.json(toOrganizationResponse(organization), 201);
       } catch (error) {
         throw toHttpException(error);
@@ -243,6 +250,11 @@ export function createOrganizationRoutes(
           email,
           role,
         });
+        try {
+          await deps.audit?.memberInvited(user.id, invitation.organizationId, email);
+        } catch {
+          /* audit is best-effort */
+        }
         return c.json({ invitation: toInvitationResponse(invitation), token }, 201);
       } catch (error) {
         throw toHttpException(error);
@@ -272,7 +284,16 @@ export function createOrganizationRoutes(
       }
       const { token } = c.req.valid("json");
       try {
-        const membership = await acceptInvitation({ token, userId: user.id });
+        const { membership, invitation } = await acceptInvitation({ token, userId: user.id });
+        try {
+          await deps.audit?.invitationAccepted(
+            user.id,
+            membership.organizationId,
+            invitation.email,
+          );
+        } catch {
+          /* audit is best-effort */
+        }
         return c.json(toMembershipResponse(membership), 200);
       } catch (error) {
         throw toHttpException(error);
@@ -314,6 +335,16 @@ export function createOrganizationRoutes(
           organizationId: c.req.param("id") as string,
           newOwnerUserId,
         });
+        try {
+          await deps.audit?.ownershipTransferred(
+            user.id,
+            previousOwner.organizationId,
+            previousOwner.userId,
+            newOwner.userId,
+          );
+        } catch {
+          /* audit is best-effort */
+        }
         return c.json(
           {
             previousOwner: toMembershipResponse(previousOwner),
@@ -352,6 +383,11 @@ export function createOrganizationRoutes(
           // widens the path type so Hono's fallback overload returns string | undefined.
           organizationId: c.req.param("id") as string,
         });
+        try {
+          await deps.audit?.organizationSuspended(user.id, organization.id);
+        } catch {
+          /* audit is best-effort */
+        }
         return c.json(toOrganizationResponse(organization), 200);
       } catch (error) {
         throw toHttpException(error);
@@ -383,6 +419,15 @@ export function createOrganizationRoutes(
           organizationId: c.req.param("id") as string,
           targetUserId: c.req.param("userId") as string,
         });
+        try {
+          await deps.audit?.memberRemoved(
+            user.id,
+            c.req.param("id") as string,
+            c.req.param("userId") as string,
+          );
+        } catch {
+          /* audit is best-effort */
+        }
         return c.body(null, 204);
       } catch (error) {
         throw toHttpException(error);
@@ -415,6 +460,11 @@ export function createOrganizationRoutes(
           organizationId: c.req.param("id") as string,
           confirm: c.req.valid("query").confirm === "true",
         });
+        try {
+          await deps.audit?.organizationDeleted(user.id, c.req.param("id") as string);
+        } catch {
+          /* audit is best-effort */
+        }
         return c.body(null, 204);
       } catch (error) {
         throw toHttpException(error);

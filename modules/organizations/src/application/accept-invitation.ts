@@ -1,4 +1,4 @@
-import { assertInvitationUsable } from "../domain/invitation.entity";
+import { assertInvitationUsable, type Invitation } from "../domain/invitation.entity";
 import type { Membership } from "../domain/membership.entity";
 import {
   InvitationNotFoundError,
@@ -19,10 +19,15 @@ export interface AcceptInvitationInput {
   userId: string;
 }
 
+export interface AcceptInvitationResult {
+  membership: Membership;
+  invitation: Invitation;
+}
+
 export type AcceptInvitationUseCase = ReturnType<typeof acceptInvitationUseCase>;
 
 export function acceptInvitationUseCase(deps: AcceptInvitationDeps) {
-  return async (input: AcceptInvitationInput): Promise<Membership> => {
+  return async (input: AcceptInvitationInput): Promise<AcceptInvitationResult> => {
     const tokenHash = hashInvitationToken(input.token);
     const invitation = await deps.invitations.findByTokenHash(tokenHash);
     if (invitation === null) {
@@ -45,6 +50,6 @@ export function acceptInvitationUseCase(deps: AcceptInvitationDeps) {
       role: invitation.role,
     });
     await deps.invitations.markUsed(invitation.id, now);
-    return membership;
+    return { membership, invitation };
   };
 }

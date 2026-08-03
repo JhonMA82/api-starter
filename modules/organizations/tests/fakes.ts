@@ -1,3 +1,4 @@
+import type { AuditEntryInput, AuditLogger } from "@consulting/audit";
 import type {
   CreateInvitationInput,
   CreateMembershipInput,
@@ -233,6 +234,19 @@ export function createFakeRepositories(): FakeRepositories {
     membershipStore,
     invitationStore,
   };
+}
+
+export function createFakeAudit(): { audit: AuditLogger; records: AuditEntryInput[] } {
+  const records: AuditEntryInput[] = [];
+  const audit: AuditLogger = {
+    async record(input: AuditEntryInput): Promise<void> {
+      records.push(input);
+    },
+    async list() {
+      return [];
+    },
+  };
+  return { audit, records };
 }
 
 export function createFakeUnitOfWork(repos: FakeRepositories): {

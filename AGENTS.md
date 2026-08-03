@@ -20,8 +20,9 @@ Convenciones del repositorio para agentes de IA y colaboradores humanos.
 - Dirección de dependencias: `domain ← application ← http` (ver `docs/architecture.md`).
 - `packages/*` (config, core, contracts): **sin** importaciones de Hono ni Bun. Excepción explícita: `packages/auth` puede importar Hono (solo tipos) y better-auth; `packages/auth-client`, solo better-auth.
 - `packages/authorization` es 100% puro (sin dependencias de runtime); `packages/audit` puede importar drizzle-orm y postgres pero no Hono ni Bun ni better-auth.
-- `modules/*`: **sin** importaciones de `@consulting/auth` ni `@consulting/auth-client`; tampoco importan `@consulting/authorization` para decidir permisos en repositorios (la decisión vive en http vía `requirePermission`).
+- `modules/*`: **sin** importaciones de `@consulting/auth` ni `@consulting/auth-client`; tampoco importan `@consulting/authorization` para decidir permisos en repositorios (la decisión vive en http vía `requirePermission`). `modules/organizations` (cluster de tenant: organizaciones/membresías/invitaciones) sí puede importar `@consulting/audit` para la auditoría por tenant.
 - `modules/*/src/domain` y `modules/*/src/application`: **sin** Hono ni Bun.
+- Recursos de tenant: las búsquedas tenant-scoped siempre llevan `organizationId` (nunca ids desnudos para membresías/invitaciones); las invitaciones se resuelven por hash del token.
 - `apps/api/src/server.ts` es el **único** archivo de producción que toca APIs de Bun.
 - Rutas de negocio se montan bajo `/api/v1`.
 - Errores: RFC 9457 (`application/problem+json`), siempre con `code`, `requestId`, `instance`; nunca filtrar stack traces ni internos.

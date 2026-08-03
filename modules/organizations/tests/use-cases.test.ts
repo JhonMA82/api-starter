@@ -301,7 +301,7 @@ describe("acceptInvitationUseCase", () => {
     repos.organizationStore.set("org-1", makeOrganization());
     const seeded = await seedInvitation(repos);
 
-    const membership = await useCase({ token: "a".repeat(64), userId: "user-2" });
+    const { membership, invitation } = await useCase({ token: "a".repeat(64), userId: "user-2" });
 
     expect(membership).toMatchObject({
       organizationId: "org-1",
@@ -309,6 +309,7 @@ describe("acceptInvitationUseCase", () => {
       role: "admin",
       status: "active",
     });
+    expect(invitation).toMatchObject({ email: "invitee@example.com" });
     expect(repos.membershipStore.get(membership.id)).toEqual(membership);
     const stored = repos.invitationStore.get(seeded.id);
     expect(stored?.usedAt).toBeInstanceOf(Date);

@@ -1,4 +1,5 @@
 import { afterAll, beforeAll, describe, expect, test } from "bun:test";
+import { type AuditLogger, createAuditDb, createAuditLogger } from "@consulting/audit";
 import { type Auth, createAuth } from "@consulting/auth";
 import type { Config } from "@consulting/config";
 import {
@@ -115,12 +116,14 @@ describeDb("organization HTTP API (real database)", () => {
     TRUSTED_ORIGINS: [],
   };
   let auth: Auth | undefined;
+  let auditLogger: AuditLogger | undefined;
 
   beforeAll(async () => {
     await resetDatabase(client);
     await migrateToLatest(client);
 
     const db = createDb(client);
+    auditLogger = createAuditLogger(createAuditDb(client));
     const createdAuth = createAuth({
       secret: config.BETTER_AUTH_SECRET,
       baseURL: config.BETTER_AUTH_URL ?? config.API_BASE_URL,
@@ -137,6 +140,7 @@ describeDb("organization HTTP API (real database)", () => {
           invitations: createInvitationRepository(db),
           uow: null,
         },
+        audit: auditLogger,
       },
     });
   });
@@ -287,6 +291,18 @@ describeDb("organization HTTP API (real database)", () => {
       expect(await readJson<{ code: string }>(suspendedAccessResponse)).toMatchObject({
         code: "FORBIDDEN",
       });
+
+      const auditEntries = (await auditLogger?.list()) ?? [];
+      const orgAuditEntries = auditEntries.filter(
+        (entry) => entry.resourceType === "organization" && entry.resourceId === organizationId,
+      );
+      expect(orgAuditEntries.some((entry) => entry.action === "organization.created")).toBe(true);
+      expect(orgAuditEntries.some((entry) => entry.action === "member.invited")).toBe(true);
+      expect(
+        orgAuditEntries
+          .filter((entry) => entry.action === "member.invited")
+          .every((entry) => entry.actorUserId !== null),
+      ).toBe(true);
     },
     TEST_TIMEOUT_MS,
   );

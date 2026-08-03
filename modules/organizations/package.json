@@ -7,6 +7,7 @@
     ".": "./src/index.ts"
   },
   "dependencies": {
+    "@consulting/audit": "workspace:*",
     "@consulting/contracts": "workspace:*",
     "@consulting/core": "workspace:*",
     "@hono/standard-validator": "0.2.3",

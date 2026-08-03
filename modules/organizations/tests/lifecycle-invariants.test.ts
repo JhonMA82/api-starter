@@ -191,7 +191,7 @@ describeDb("organization lifecycle invariants (real database)", () => {
       email: "wu5-reuse@example.com",
       role: "member",
     });
-    const membership = await accept({ token: second.token, userId: "wu5-invite-2" });
+    const { membership } = await accept({ token: second.token, userId: "wu5-invite-2" });
     expect(membership.organizationId).toBe(org.id);
     expect(membership.userId).toBe("wu5-invite-2");
 

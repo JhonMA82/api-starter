@@ -19,6 +19,7 @@
       "name": "@consulting/api",
       "version": "0.1.0",
       "dependencies": {
+        "@consulting/audit": "workspace:*",
         "@consulting/auth": "workspace:*",
         "@consulting/authorization": "workspace:*",
         "@consulting/config": "workspace:*",
@@ -61,6 +62,7 @@
       "name": "@consulting/module-organizations",
       "version": "0.1.0",
       "dependencies": {
+        "@consulting/audit": "workspace:*",
         "@consulting/contracts": "workspace:*",
         "@consulting/core": "workspace:*",
         "@hono/standard-validator": "0.2.3",

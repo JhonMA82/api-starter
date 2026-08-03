@@ -100,13 +100,56 @@ en el frontend es solo UX.
   Bun ni better-auth. La decisión de permisos vive en la capa http vía
   `requirePermission`, nunca dentro de repositorios.
 
+## Multi-tenancy (Fase 5)
+
+El perfil multi-tenant responde a *de qué organización eres miembro y qué puedes
+hacer en ella* (spec §4.4, §11.1-11.8): modelo **shared schema** (§11.2) — una
+sola base de datos, filas por tenant con `organization_id`, repositorios que
+siempre acotan por tenant. Ver ADR-0007.
+
+- **Cluster `modules/organizations`** (un solo módulo por cluster, §4.7):
+  organizaciones, membresías e invitaciones con la tríada `domain ←
+  application ← http` y la migración 0004 (cascadas FK, unicidad, expiración y
+  uso único de invitaciones).
+- **Roles de organización predefinidos** como columna `membership.role`
+  (owner/admin/auditor/member); propiedad con un único owner (guard del último
+  owner, §11.8). Sin tablas dinámicas de roles (diferido, §4.7).
+- **Resolución de tenant:** cabecera `x-organization-id` + `TenantContext` +
+  `tenancy-service` (`resolveTenantContext`); el middleware de tenant resuelve
+  el contexto antes de cada handler tenant-scoped. Organizaciones desconocidas
+  → 404; suspendidas o sin membresía activa → 403; la existencia de otros
+  tenants nunca se filtra (§11.5/11.6).
+- **Repositorios tenant-scoped:** búsquedas de membresía/invitación con
+  `{ organizationId, id }`; las invitaciones se resuelven por hash global del
+  token (nunca por id desnudo); tests IDOR prueban el rechazo del acceso
+  cross-tenant.
+- **Ciclo de vida** (§11.4/§11.8): crear (slug único), invitar (token de un
+  solo uso, restricciones de rol), aceptar (expiración + no reutilizable),
+  transferir propiedad (el owner anterior pasa a admin), suspender (los
+  miembros pierden acceso), eliminar miembro (el último owner no puede
+  eliminarse) y borrar con confirmación fuerte (`confirm=true`, cascada de
+  membresías e invitaciones).
+- **Auditoría por tenant** (§4.4, §11.4 paso 8): la capa http registra cada
+  éxito del ciclo de vida vía `createOrganizationAudit`
+  (`modules/organizations`) sobre `packages/audit` — `resourceType:
+  "organization"`, `resourceId: <organizationId>`, actor y outcome; la
+  auditoría es best-effort y nunca rompe la operación de negocio.
+- **Superficie HTTP:** `POST /organizations`, `GET /organizations/:id`
+  (contexto de tenant), `POST /:id/invitations`, `POST /accept-invitation`,
+  `POST /:id/ownership`, `POST /:id/suspend`, `DELETE /:id/members/:userId`,
+  `DELETE /:id?confirm=true`.
+- **Límites de capas:** el módulo usa tipado estructural para la sesión (sin
+  importar `@consulting/auth`); `modules/organizations` puede importar
+  `@consulting/audit` (tipos y API de registro) desde la capa http/application.
+
 ## Perfiles y fases futuras (resumen)
 
 - **Fase 0+1 (completada):** fundación — registros, ADRs, núcleo HTTP con rutas base, OpenAPI 3.1 + Scalar, módulo de ejemplo, Docker y CI de 5 jobs.
 - **Fase 2 (completada, persistencia):** PostgreSQL 17 + Drizzle ORM sobre postgres.js, migraciones SQL commitadas bajo `migrations/`, módulo `notes` de referencia con tests de DB reales, scripts `db:*` con podman, perfil `database` en Docker Compose y CI de 8 jobs. Ver ADR-0005 y `docs/migrations-runbook.md`.
 - **Fase 3 (completada, autenticación):** Better Auth 1.6.25 aislado en `packages/auth` (`@consulting/auth`) con adaptador drizzle (migración 0002: `user`/`session`/`account`/`verification`), email/contraseña y plugins `bearer()`/openAPI; cliente browser-safe `packages/auth-client`; montaje de `/api/auth/*` y middleware de sesión vía la costura `createApp(config, { auth })`; tests de DB reales y extensión de CI. Ver [Autenticación (Fase 3)](#autenticación-fase-3).
 - **Fase 4 (completada, autorización single-tenant):** catálogo explícito de permisos `request.*`, roles admin/reviewer/member y políticas ABAC en `packages/authorization` (deny by default); enforcement HTTP con `requirePermission` y la costura `getRoles` (códigos `401 UNAUTHORIZED` / `403 FORBIDDEN`, rutas demo `/api/v1/authorization/*`); auditoría append-only `audit_log` (migración 0003) con trigger de base de datos en `packages/audit`. Ver [Autorización (Fase 4)](#autorización-fase-4).
-- **Fases posteriores:** sin comprometer detalles concretos — la Fase 5 será multi-tenancy (organizaciones, membresías, roles por org y aislamiento), sobre los roles globales actuales; además se prevé crecimiento hacia rutas HTTP del módulo `notes` y más módulos de negocio bajo `/api/v1`, junto con la revisión de decisiones que lo requieran (p.ej. manejo de secretos, gate de capas automatizado).
+- **Fase 5 (completada, multi-tenancy):** `modules/organizations` (organizaciones/membresías/invitaciones, migración 0004) con shared schema; roles de org predefinidos (owner/admin/auditor/member); `TenantContext` + flujo de resolución con `x-organization-id`; repositorios tenant-scoped con protección IDOR; ciclo de vida completo (crear/invitar/aceptar/transferir/suspender/eliminar miembro/borrar con confirmación) e invariantes (§11.8); auditoría por tenant sobre `packages/audit` y ADR-0007. Ver [Multi-tenancy (Fase 5)](#multi-tenancy-fase-5).
+- **Fases posteriores:** sin comprometer detalles concretos — la Fase 6 será integraciones (outbox, worker, webhooks, API keys) sobre los perfiles multi-tenant y single-tenant actuales; además se prevé crecimiento hacia rutas HTTP del módulo `notes` y más módulos de negocio bajo `/api/v1`, junto con la revisión de decisiones que lo requieran (p.ej. manejo de secretos, gate de capas automatizado).
 - **Perfil Docker `core`:** solo el servicio `api`. La base de datos vive en el perfil `database` (postgres) y no es un requisito del servidor HTTP.
 
 ## Modelo de datos y errores
