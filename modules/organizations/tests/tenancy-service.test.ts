@@ -1,4 +1,5 @@
 import { describe, expect, test } from "bun:test";
+import type { MembershipRepository, OrganizationRepository } from "../src/application/ports";
 import type { TenancyDeps } from "../src/application/tenancy-service";
 import { createTenancyService } from "../src/application/tenancy-service";
 import type { Membership } from "../src/domain/membership.entity";
@@ -35,15 +36,54 @@ function makeMembership(overrides: Partial<Membership> = {}): Membership {
   };
 }
 
-function makeDeps(overrides: Partial<TenancyDeps> = {}): TenancyDeps {
+function makeOrganizationRepository(
+  overrides: Partial<OrganizationRepository> = {},
+): OrganizationRepository {
   return {
-    organizations: {
-      findById: async () => null,
+    findById: async () => null,
+    findBySlug: async () => null,
+    create: async () => {
+      throw new Error("create not used in tenancy tests");
     },
-    memberships: {
-      findActiveByOrganizationAndUser: async () => null,
+    updateStatus: async () => {
+      throw new Error("updateStatus not used in tenancy tests");
     },
     ...overrides,
+  };
+}
+
+function makeMembershipRepository(
+  overrides: Partial<MembershipRepository> = {},
+): MembershipRepository {
+  return {
+    findById: async () => null,
+    findActiveByOrganizationAndUser: async () => null,
+    findByOrganizationAndUser: async () => null,
+    listByOrganization: async () => [],
+    create: async () => {
+      throw new Error("create not used in tenancy tests");
+    },
+    updateRole: async () => {
+      throw new Error("updateRole not used in tenancy tests");
+    },
+    updateStatus: async () => {
+      throw new Error("updateStatus not used in tenancy tests");
+    },
+    countOwners: async () => 0,
+    delete: async () => {},
+    ...overrides,
+  };
+}
+
+function makeDeps(
+  overrides: {
+    organizations?: Partial<OrganizationRepository>;
+    memberships?: Partial<MembershipRepository>;
+  } = {},
+): TenancyDeps {
+  return {
+    organizations: makeOrganizationRepository(overrides.organizations),
+    memberships: makeMembershipRepository(overrides.memberships),
   };
 }
 

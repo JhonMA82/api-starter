@@ -1,4 +1,7 @@
 export type {
+  CreateInvitationInput,
+  CreateMembershipInput,
+  CreateOrganizationInput,
   InvitationRepository,
   MembershipRepository,
   OrganizationRepository,
@@ -39,4 +42,11 @@ export {
 } from "./domain/organization-roles";
 export type { TenantContext } from "./domain/tenant-context";
 export { createTenantContext } from "./domain/tenant-context";
+export {
+  createClient,
+  createDb,
+  createInvitationRepository,
+  createMembershipRepository,
+  createOrganizationRepository,
+} from "./infrastructure";
 export { organizationSchema } from "./infrastructure/organization.schema";
