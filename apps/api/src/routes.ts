@@ -5,8 +5,9 @@ import {
   ReadyResponse,
   VersionResponse,
 } from "@consulting/contracts";
+import { apiReference } from "@scalar/hono-api-reference";
 import { Hono } from "hono";
-import { describeRoute, resolver } from "hono-openapi";
+import { describeRoute, openAPIRouteHandler, resolver } from "hono-openapi";
 
 function errorResponses() {
   const problem = { "application/problem+json": { schema: resolver(ProblemDetailsSchema) } };
@@ -71,6 +72,15 @@ export function createRoutes(config: Config): Hono {
         200,
       ),
   );
+
+  app.get(
+    "/openapi.json",
+    openAPIRouteHandler(app, {
+      documentation: { info: { title: "@consulting/api", version: config.APP_VERSION } },
+      exclude: ["/openapi.json", "/docs"],
+    }),
+  );
+  app.get("/docs", apiReference({ url: "/openapi.json" }));
 
   return app;
 }
