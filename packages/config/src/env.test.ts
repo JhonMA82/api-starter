@@ -10,6 +10,7 @@ const validEnv = {
   PORT: "3000",
   HOST: "0.0.0.0",
   CORS_ORIGINS: "",
+  DATABASE_URL: "postgres://postgres:postgres@localhost:5432/api",
 };
 
 describe("parseEnv", () => {
@@ -23,7 +24,13 @@ describe("parseEnv", () => {
       PORT: 3000,
       HOST: "0.0.0.0",
       CORS_ORIGINS: [],
+      DATABASE_URL: "postgres://postgres:postgres@localhost:5432/api",
     });
+  });
+
+  test("missing DATABASE_URL aborts naming the variable", () => {
+    const { DATABASE_URL: _databaseUrl, ...withoutDatabaseUrl } = validEnv;
+    expect(() => parseEnv(withoutDatabaseUrl)).toThrow(/DATABASE_URL/);
   });
 
   test("missing LOG_LEVEL aborts naming the variable", () => {

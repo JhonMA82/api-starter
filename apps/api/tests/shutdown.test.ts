@@ -60,6 +60,7 @@ describe("server graceful shutdown", () => {
           LOG_LEVEL: "info",
           PORT: String(port),
           HOST: "127.0.0.1",
+          DATABASE_URL: "postgres://postgres:postgres@localhost:5432/api",
         },
         stdout: "pipe",
         stderr: "pipe",

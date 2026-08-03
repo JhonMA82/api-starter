@@ -17,6 +17,7 @@ const config: Config = {
   PORT: 3000,
   HOST: "0.0.0.0",
   CORS_ORIGINS: ["https://app.example.com"],
+  DATABASE_URL: "postgres://postgres:postgres@localhost:5432/api",
 };
 
 const app = createApp(config);
