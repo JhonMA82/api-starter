@@ -22,6 +22,13 @@
       "when": 1785735168319,
       "tag": "0002_chemical_karen_page",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1785771244690,
+      "tag": "0003_careless_epoch",
+      "breakpoints": true
     }
   ]
 }

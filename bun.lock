@@ -56,6 +56,14 @@
         "postgres": "3.4.9",
       },
     },
+    "packages/audit": {
+      "name": "@consulting/audit",
+      "version": "0.1.0",
+      "dependencies": {
+        "drizzle-orm": "0.45.2",
+        "postgres": "3.4.9",
+      },
+    },
     "packages/auth": {
       "name": "@consulting/auth",
       "version": "0.1.0",
@@ -136,6 +144,8 @@
     "@biomejs/cli-win32-x64": ["@biomejs/cli-win32-x64@2.5.6", "", { "os": "win32", "cpu": "x64" }, "sha512-WN05KwXnTO/2J45RQPvzZMXf7tZUIofHoR35xIPfCo7pQ2RFidxI8sfb5mGsaTxdMmEOzHzOPRCdA5/fCpc7xQ=="],
 
     "@consulting/api": ["@consulting/api@workspace:apps/api"],
+
+    "@consulting/audit": ["@consulting/audit@workspace:packages/audit"],
 
     "@consulting/auth": ["@consulting/auth@workspace:packages/auth"],
 
