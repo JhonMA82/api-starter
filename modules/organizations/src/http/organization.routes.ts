@@ -12,6 +12,7 @@ import {
   type CreateOrganizationDeps,
   createOrganizationUseCase,
 } from "../application/create-organization";
+import { deleteOrganizationUseCase } from "../application/delete-organization";
 import { inviteMemberUseCase } from "../application/invite-member";
 import type {
   InvitationRepository,
@@ -19,6 +20,7 @@ import type {
   OrganizationRepository,
   UnitOfWork,
 } from "../application/ports";
+import { removeMemberUseCase } from "../application/remove-member";
 import { suspendOrganizationUseCase } from "../application/suspend-organization";
 import type { TenancyService } from "../application/tenancy-service";
 import { transferOwnershipUseCase } from "../application/transfer-ownership";
@@ -157,6 +159,8 @@ export function createOrganizationRoutes(
   const acceptInvitation = acceptInvitationUseCase(deps);
   const transferOwnership = transferOwnershipUseCase(deps);
   const suspendOrganization = suspendOrganizationUseCase(deps);
+  const removeMember = removeMemberUseCase(deps);
+  const deleteOrganization = deleteOrganizationUseCase(deps);
 
   app.post(
     "/organizations",
@@ -349,6 +353,69 @@ export function createOrganizationRoutes(
           organizationId: c.req.param("id") as string,
         });
         return c.json(toOrganizationResponse(organization), 200);
+      } catch (error) {
+        throw toHttpException(error);
+      }
+    },
+  );
+
+  app.delete(
+    "/organizations/:id/members/:userId",
+    describeRoute({
+      description:
+        "Removes a member from the organization; the last owner cannot be removed (transfer ownership first)",
+      responses: {
+        204: { description: "Member removed" },
+        ...tenantResponses(),
+      },
+    }),
+    tenantContext,
+    async (c) => {
+      const user = c.get("user");
+      if (user === null) {
+        throw new HTTPException(401);
+      }
+      try {
+        await removeMember({
+          actorUserId: user.id,
+          // The route pattern guarantees the :id segment; the middleware chain
+          // widens the path type so Hono's fallback overload returns string | undefined.
+          organizationId: c.req.param("id") as string,
+          targetUserId: c.req.param("userId") as string,
+        });
+        return c.body(null, 204);
+      } catch (error) {
+        throw toHttpException(error);
+      }
+    },
+  );
+
+  app.delete(
+    "/organizations/:id",
+    describeRoute({
+      description:
+        "Deletes the organization after strong confirmation; memberships and invitations cascade",
+      responses: {
+        204: { description: "Organization deleted" },
+        ...tenantResponses(),
+      },
+    }),
+    tenantContext,
+    sValidator("query", z.object({ confirm: z.enum(["true", "false"]) }), validationErrorHandler),
+    async (c) => {
+      const user = c.get("user");
+      if (user === null) {
+        throw new HTTPException(401);
+      }
+      try {
+        await deleteOrganization({
+          actorUserId: user.id,
+          // The route pattern guarantees the :id segment; the middleware chain
+          // widens the path type so Hono's fallback overload returns string | undefined.
+          organizationId: c.req.param("id") as string,
+          confirm: c.req.valid("query").confirm === "true",
+        });
+        return c.body(null, 204);
       } catch (error) {
         throw toHttpException(error);
       }

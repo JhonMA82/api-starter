@@ -538,3 +538,96 @@ describe("POST /api/v1/organizations/:id/suspend", () => {
     expect(await problem(res)).toMatchObject({ status: 403, code: "FORBIDDEN" });
   });
 });
+
+describe("DELETE /api/v1/organizations/:id/members/:userId", () => {
+  test("removes a member with 204", async () => {
+    const { app, repos } = setup();
+    repos.membershipStore.set(
+      "membership-2",
+      makeMembership({ id: "membership-2", userId: MEMBER.id, role: "member" }),
+    );
+
+    const res = await app.request(
+      "/api/v1/organizations/org-1/members/user-2",
+      orgRequest("org-1", { method: "DELETE", cookie: SESSION_COOKIE }),
+    );
+
+    expect(res.status).toBe(204);
+    expect(repos.membershipStore.has("membership-2")).toBe(false);
+  });
+
+  test("rejects removing the last owner with 400 VALIDATION_FAILED", async () => {
+    const { app } = setup();
+
+    const res = await app.request(
+      "/api/v1/organizations/org-1/members/user-1",
+      orgRequest("org-1", { method: "DELETE", cookie: SESSION_COOKIE }),
+    );
+
+    expect(res.status).toBe(400);
+    expect(await problem(res)).toMatchObject({ status: 400, code: "VALIDATION_FAILED" });
+  });
+
+  test("rejects a non-owner removing another member with 403 FORBIDDEN", async () => {
+    const { app, repos } = setup(MEMBER);
+    repos.membershipStore.set(
+      "membership-2",
+      makeMembership({ id: "membership-2", userId: MEMBER.id, role: "member" }),
+    );
+    repos.membershipStore.set(
+      "membership-3",
+      makeMembership({ id: "membership-3", userId: "user-3", role: "member" }),
+    );
+
+    const res = await app.request(
+      "/api/v1/organizations/org-1/members/user-3",
+      orgRequest("org-1", { method: "DELETE", cookie: SESSION_COOKIE }),
+    );
+
+    expect(res.status).toBe(403);
+    expect(await problem(res)).toMatchObject({ status: 403, code: "FORBIDDEN" });
+  });
+});
+
+describe("DELETE /api/v1/organizations/:id", () => {
+  test("deletes the organization after confirmation with 204", async () => {
+    const { app, repos } = setup();
+
+    const res = await app.request(
+      "/api/v1/organizations/org-1?confirm=true",
+      orgRequest("org-1", { method: "DELETE", cookie: SESSION_COOKIE }),
+    );
+
+    expect(res.status).toBe(204);
+    expect(repos.organizationStore.has("org-1")).toBe(false);
+  });
+
+  test("rejects deletion without confirmation with 400 VALIDATION_FAILED", async () => {
+    const { app, repos } = setup();
+
+    const res = await app.request(
+      "/api/v1/organizations/org-1?confirm=false",
+      orgRequest("org-1", { method: "DELETE", cookie: SESSION_COOKIE }),
+    );
+
+    expect(res.status).toBe(400);
+    expect(await problem(res)).toMatchObject({ status: 400, code: "VALIDATION_FAILED" });
+    expect(repos.organizationStore.has("org-1")).toBe(true);
+  });
+
+  test("rejects a non-owner deleting with 403 FORBIDDEN", async () => {
+    const { app, repos } = setup(MEMBER);
+    repos.membershipStore.set(
+      "membership-2",
+      makeMembership({ id: "membership-2", userId: MEMBER.id, role: "member" }),
+    );
+
+    const res = await app.request(
+      "/api/v1/organizations/org-1?confirm=true",
+      orgRequest("org-1", { method: "DELETE", cookie: SESSION_COOKIE }),
+    );
+
+    expect(res.status).toBe(403);
+    expect(await problem(res)).toMatchObject({ status: 403, code: "FORBIDDEN" });
+  });
+});

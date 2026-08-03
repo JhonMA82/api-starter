@@ -9,6 +9,7 @@ import {
   InvitationExpiredError,
   InvitationNotFoundError,
   MembershipNotFoundError,
+  OrganizationDeletionRequiresConfirmationError,
   OrganizationNameError,
   OrganizationNotFoundError,
   OrganizationSlugError,
@@ -46,7 +47,8 @@ export function toHttpException(error: unknown): unknown {
     error instanceof InvalidOrganizationRoleError ||
     error instanceof InvitationExpiredError ||
     error instanceof InvitationAlreadyUsedError ||
-    error instanceof OwnerConstraintError
+    error instanceof OwnerConstraintError ||
+    error instanceof OrganizationDeletionRequiresConfirmationError
   ) {
     return new HTTPException(400);
   }
