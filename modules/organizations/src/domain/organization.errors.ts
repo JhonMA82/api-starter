@@ -88,3 +88,10 @@ export class OwnerConstraintError extends Error {
     this.name = "OwnerConstraintError";
   }
 }
+
+export class OrganizationDeletionRequiresConfirmationError extends Error {
+  constructor() {
+    super("deleting an organization requires strong confirmation");
+    this.name = "OrganizationDeletionRequiresConfirmationError";
+  }
+}

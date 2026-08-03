@@ -27,6 +27,7 @@ export interface OrganizationRepository {
   findBySlug(slug: string): Promise<Organization | null>;
   create(input: CreateOrganizationInput): Promise<Organization>;
   updateStatus(id: string, status: OrganizationStatus): Promise<Organization>;
+  delete(id: string): Promise<void>;
 }
 
 export interface MembershipRepository {

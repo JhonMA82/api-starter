@@ -3,7 +3,9 @@ import { createHash } from "node:crypto";
 
 import { acceptInvitationUseCase } from "../src/application/accept-invitation";
 import { createOrganizationUseCase } from "../src/application/create-organization";
+import { deleteOrganizationUseCase } from "../src/application/delete-organization";
 import { inviteMemberUseCase } from "../src/application/invite-member";
+import { removeMemberUseCase } from "../src/application/remove-member";
 import { suspendOrganizationUseCase } from "../src/application/suspend-organization";
 import { createInvitationToken, hashInvitationToken } from "../src/application/token";
 import { transferOwnershipUseCase } from "../src/application/transfer-ownership";
@@ -17,6 +19,7 @@ import {
   InvitationExpiredError,
   InvitationNotFoundError,
   MembershipNotFoundError,
+  OrganizationDeletionRequiresConfirmationError,
   OrganizationNameError,
   OrganizationNotFoundError,
   OrganizationSlugError,
@@ -490,6 +493,208 @@ describe("suspendOrganizationUseCase", () => {
     await expect(useCase({ actorUserId: "user-1", organizationId: "missing-org" })).rejects.toThrow(
       OrganizationNotFoundError,
     );
+  });
+});
+
+describe("removeMemberUseCase", () => {
+  function setup(actorRole: OrganizationRole = "owner") {
+    const repos = createFakeRepositories();
+    repos.organizationStore.set("org-1", makeOrganization());
+    repos.membershipStore.set(
+      "membership-1",
+      makeMembership({ id: "membership-1", userId: "user-1", role: actorRole }),
+    );
+    const useCase = removeMemberUseCase({
+      organizations: repos.organizations,
+      memberships: repos.memberships,
+    });
+    return { repos, useCase };
+  }
+
+  test("an owner removes another member", async () => {
+    const { repos, useCase } = setup("owner");
+    repos.membershipStore.set(
+      "membership-2",
+      makeMembership({ id: "membership-2", userId: "user-2", role: "member" }),
+    );
+
+    await useCase({ actorUserId: "user-1", organizationId: "org-1", targetUserId: "user-2" });
+
+    expect(repos.membershipStore.has("membership-2")).toBe(false);
+    expect(repos.membershipStore.has("membership-1")).toBe(true);
+  });
+
+  test("an admin removes another member", async () => {
+    const { repos, useCase } = setup("admin");
+    repos.membershipStore.set(
+      "membership-2",
+      makeMembership({ id: "membership-2", userId: "user-2", role: "member" }),
+    );
+
+    await useCase({ actorUserId: "user-1", organizationId: "org-1", targetUserId: "user-2" });
+
+    expect(repos.membershipStore.has("membership-2")).toBe(false);
+  });
+
+  test("a member removing another member is forbidden", async () => {
+    const { repos, useCase } = setup("member");
+    repos.membershipStore.set(
+      "membership-2",
+      makeMembership({ id: "membership-2", userId: "user-2", role: "member" }),
+    );
+
+    await expect(
+      useCase({ actorUserId: "user-1", organizationId: "org-1", targetUserId: "user-2" }),
+    ).rejects.toThrow(ForbiddenOrganizationActionError);
+    expect(repos.membershipStore.has("membership-2")).toBe(true);
+  });
+
+  test("a member leaves by removing themselves", async () => {
+    const { repos, useCase } = setup("member");
+
+    await useCase({ actorUserId: "user-1", organizationId: "org-1", targetUserId: "user-1" });
+
+    expect(repos.membershipStore.has("membership-1")).toBe(false);
+  });
+
+  test("the only owner cannot leave without transferring ownership", async () => {
+    const { repos, useCase } = setup("owner");
+
+    await expect(
+      useCase({ actorUserId: "user-1", organizationId: "org-1", targetUserId: "user-1" }),
+    ).rejects.toThrow(OwnerConstraintError);
+    expect(repos.membershipStore.has("membership-1")).toBe(true);
+  });
+
+  test("an admin removing the only owner is blocked", async () => {
+    const { repos, useCase } = setup("admin");
+    repos.membershipStore.set(
+      "membership-2",
+      makeMembership({ id: "membership-2", userId: "user-2", role: "owner" }),
+    );
+
+    await expect(
+      useCase({ actorUserId: "user-1", organizationId: "org-1", targetUserId: "user-2" }),
+    ).rejects.toThrow(OwnerConstraintError);
+    expect(repos.membershipStore.has("membership-2")).toBe(true);
+  });
+
+  test("removing an owner succeeds when another owner exists", async () => {
+    const { repos, useCase } = setup("owner");
+    repos.membershipStore.set(
+      "membership-2",
+      makeMembership({ id: "membership-2", userId: "user-2", role: "owner" }),
+    );
+
+    await useCase({ actorUserId: "user-1", organizationId: "org-1", targetUserId: "user-2" });
+
+    expect(repos.membershipStore.has("membership-2")).toBe(false);
+    expect(await repos.memberships.countOwners("org-1")).toBe(1);
+  });
+
+  test("removing an inactive target throws InactiveMembershipError", async () => {
+    const { repos, useCase } = setup("owner");
+    repos.membershipStore.set(
+      "membership-2",
+      makeMembership({ id: "membership-2", userId: "user-2", status: "inactive" }),
+    );
+
+    await expect(
+      useCase({ actorUserId: "user-1", organizationId: "org-1", targetUserId: "user-2" }),
+    ).rejects.toThrow(InactiveMembershipError);
+    expect(repos.membershipStore.has("membership-2")).toBe(true);
+  });
+
+  test("throws OrganizationNotFoundError when the organization is missing", async () => {
+    const repos = createFakeRepositories();
+    const useCase = removeMemberUseCase({
+      organizations: repos.organizations,
+      memberships: repos.memberships,
+    });
+
+    await expect(
+      useCase({ actorUserId: "user-1", organizationId: "missing-org", targetUserId: "user-2" }),
+    ).rejects.toThrow(OrganizationNotFoundError);
+  });
+
+  test("throws MembershipNotFoundError when the actor is not a member", async () => {
+    const { useCase } = setup("owner");
+
+    await expect(
+      useCase({ actorUserId: "stranger", organizationId: "org-1", targetUserId: "user-2" }),
+    ).rejects.toThrow(MembershipNotFoundError);
+  });
+
+  test("throws MembershipNotFoundError when the target is not a member", async () => {
+    const { useCase } = setup("owner");
+
+    await expect(
+      useCase({ actorUserId: "user-1", organizationId: "org-1", targetUserId: "stranger" }),
+    ).rejects.toThrow(MembershipNotFoundError);
+  });
+});
+
+describe("deleteOrganizationUseCase", () => {
+  function setup(actorRole: OrganizationRole = "owner") {
+    const repos = createFakeRepositories();
+    repos.organizationStore.set("org-1", makeOrganization());
+    repos.membershipStore.set(
+      "membership-1",
+      makeMembership({ id: "membership-1", userId: "user-1", role: actorRole }),
+    );
+    const useCase = deleteOrganizationUseCase({
+      organizations: repos.organizations,
+      memberships: repos.memberships,
+    });
+    return { repos, useCase };
+  }
+
+  test("confirm=false throws OrganizationDeletionRequiresConfirmationError and deletes nothing", async () => {
+    const { repos, useCase } = setup();
+
+    await expect(
+      useCase({ actorUserId: "user-1", organizationId: "org-1", confirm: false }),
+    ).rejects.toThrow(OrganizationDeletionRequiresConfirmationError);
+    expect(repos.organizationStore.has("org-1")).toBe(true);
+    expect(repos.membershipStore.has("membership-1")).toBe(true);
+  });
+
+  test("an owner with confirm deletes the organization and cascades memberships and invitations", async () => {
+    const { repos, useCase } = setup("owner");
+    repos.membershipStore.set(
+      "membership-2",
+      makeMembership({ id: "membership-2", userId: "user-2", role: "member" }),
+    );
+    await repos.invitations.create({
+      organizationId: "org-1",
+      email: "invitee@example.com",
+      role: "member",
+      tokenHash: `tok-${crypto.randomUUID()}`,
+      expiresAt: new Date("2099-01-01T00:00:00Z"),
+    });
+
+    await useCase({ actorUserId: "user-1", organizationId: "org-1", confirm: true });
+
+    expect(repos.organizationStore.size).toBe(0);
+    expect(repos.membershipStore.size).toBe(0);
+    expect(repos.invitationStore.size).toBe(0);
+  });
+
+  test("a non-owner actor with confirm is forbidden", async () => {
+    const { repos, useCase } = setup("admin");
+
+    await expect(
+      useCase({ actorUserId: "user-1", organizationId: "org-1", confirm: true }),
+    ).rejects.toThrow(ForbiddenOrganizationActionError);
+    expect(repos.organizationStore.has("org-1")).toBe(true);
+  });
+
+  test("throws OrganizationNotFoundError for an unknown organization", async () => {
+    const { useCase } = setup("owner");
+
+    await expect(
+      useCase({ actorUserId: "user-1", organizationId: "missing-org", confirm: true }),
+    ).rejects.toThrow(OrganizationNotFoundError);
   });
 });
 

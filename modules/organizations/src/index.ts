@@ -10,6 +10,12 @@ export type {
 } from "./application/create-organization";
 export { createOrganizationUseCase } from "./application/create-organization";
 export type {
+  DeleteOrganizationDeps,
+  DeleteOrganizationInput,
+  DeleteOrganizationUseCase,
+} from "./application/delete-organization";
+export { deleteOrganizationUseCase } from "./application/delete-organization";
+export type {
   InviteMemberDeps,
   InviteMemberInput,
   InviteMemberResult,
@@ -24,6 +30,12 @@ export type {
   OrganizationRepository,
   UnitOfWork,
 } from "./application/ports";
+export type {
+  RemoveMemberDeps,
+  RemoveMemberInput,
+  RemoveMemberUseCase,
+} from "./application/remove-member";
+export { removeMemberUseCase } from "./application/remove-member";
 export type {
   SuspendOrganizationDeps,
   SuspendOrganizationInput,
@@ -66,6 +78,7 @@ export {
   InvitationExpiredError,
   InvitationNotFoundError,
   MembershipNotFoundError,
+  OrganizationDeletionRequiresConfirmationError,
   OrganizationNameError,
   OrganizationNotFoundError,
   OrganizationSlugError,

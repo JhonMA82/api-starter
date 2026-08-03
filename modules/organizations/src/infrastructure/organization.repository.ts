@@ -35,5 +35,8 @@ export function createOrganizationRepository(db: DbOrTransaction): OrganizationR
       }
       return rowToOrganization(row);
     },
+    async delete(id: string) {
+      await db.delete(organizations).where(eq(organizations.id, id));
+    },
   };
 }

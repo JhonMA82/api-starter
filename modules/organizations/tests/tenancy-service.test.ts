@@ -48,6 +48,7 @@ function makeOrganizationRepository(
     updateStatus: async () => {
       throw new Error("updateStatus not used in tenancy tests");
     },
+    delete: async () => {},
     ...overrides,
   };
 }

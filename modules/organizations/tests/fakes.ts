@@ -86,6 +86,19 @@ export function createFakeRepositories(): FakeRepositories {
       organizationStore.set(id, updated);
       return updated;
     },
+    async delete(id: string) {
+      organizationStore.delete(id);
+      for (const [key, membership] of membershipStore) {
+        if (membership.organizationId === id) {
+          membershipStore.delete(key);
+        }
+      }
+      for (const [key, invitation] of invitationStore) {
+        if (invitation.organizationId === id) {
+          invitationStore.delete(key);
+        }
+      }
+    },
   };
 
   const findMembershipByOrgUser = (organizationId: string, userId: string): Membership | null =>
