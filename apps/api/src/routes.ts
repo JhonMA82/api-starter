@@ -5,6 +5,7 @@ import {
   ReadyResponse,
   VersionResponse,
 } from "@consulting/contracts";
+import { exampleRoutes } from "@consulting/module-example";
 import { apiReference } from "@scalar/hono-api-reference";
 import { Hono } from "hono";
 import { describeRoute, openAPIRouteHandler, resolver } from "hono-openapi";
@@ -72,6 +73,8 @@ export function createRoutes(config: Config): Hono {
         200,
       ),
   );
+
+  app.route("/api/v1", exampleRoutes);
 
   app.get(
     "/openapi.json",

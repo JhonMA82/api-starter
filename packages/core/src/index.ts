@@ -4,6 +4,7 @@ export type {
   BuildProblemDetailsInput,
   ErrorCode,
   FieldError,
+  PathSegment,
   ProblemDetails,
   ValidationIssue,
 } from "./problem";

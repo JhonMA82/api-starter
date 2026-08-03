@@ -133,6 +133,27 @@ describe("error normalization", () => {
   });
 });
 
+describe("example module", () => {
+  test("GET /api/v1/example/hello with an empty name returns 400 problem+json naming the field", async () => {
+    const res = await app.request("/api/v1/example/hello?name=");
+    expect(res.status).toBe(400);
+    expect(res.headers.get("content-type")).toContain("application/problem+json");
+    const body = await res.json();
+    ProblemDetailsSchema.parse(body);
+    expect(body.code).toBe("VALIDATION_FAILED");
+    expect(body.errors?.[0]?.field).toBe("name");
+    expect(body.requestId).toBeString();
+    expect(body.instance).toBe("/api/v1/example/hello");
+  });
+
+  test("GET /api/v1/example/hello with a valid name returns a greeting", async () => {
+    const res = await app.request("/api/v1/example/hello?name=World");
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body).toEqual({ message: "Hello, World!" });
+  });
+});
+
 afterEach(() => {
   vi.restoreAllMocks();
 });

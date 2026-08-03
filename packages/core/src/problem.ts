@@ -80,14 +80,26 @@ export function buildProblemDetails(input: BuildProblemDetailsInput): ProblemDet
   return problem;
 }
 
+/**
+ * Standard Schema path segment (spec >= 1.0): an object-wrapped key.
+ * Kept structural so core stays dependency-free.
+ */
+export interface PathSegment {
+  readonly key: string | number | symbol;
+}
+
 export interface ValidationIssue {
-  path?: readonly (string | number | symbol)[] | undefined;
+  path?: readonly (string | number | symbol | PathSegment)[] | undefined;
   message: string;
+}
+
+function segmentToString(segment: string | number | symbol | PathSegment): string {
+  return typeof segment === "object" && segment !== null ? String(segment.key) : String(segment);
 }
 
 export function mapValidationIssues(issues: readonly ValidationIssue[]): FieldError[] {
   return issues.map((issue) => ({
-    field: issue.path ? issue.path.map(String).join(".") : "",
+    field: issue.path ? issue.path.map(segmentToString).join(".") : "",
     message: issue.message,
   }));
 }
