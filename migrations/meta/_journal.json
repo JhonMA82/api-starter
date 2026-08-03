@@ -15,6 +15,13 @@
       "when": 1785730416478,
       "tag": "0001_magenta_tenebrous",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1785735168319,
+      "tag": "0002_chemical_karen_page",
+      "breakpoints": true
     }
   ]
 }

@@ -101,6 +101,20 @@
       "license": "Unlicense",
       "purpose": "postgres.js driver — default DB driver per spec §9.2; ships own types — no @types/pg.",
       "verifiedFrom": "npm registry (verified 2026-08-02)"
+    },
+    {
+      "name": "better-auth",
+      "version": "1.6.25",
+      "license": "MIT",
+      "purpose": "Identity and database-backed sessions for the authenticated profile: email/password, CSRF/origin protection, bearer tokens, and OpenAPI; isolated inside packages/auth. @better-auth/test-utils and vitest are intentionally excluded.",
+      "verifiedFrom": "npm registry and github.com/better-auth/better-auth (verified 2026-08-02)"
+    },
+    {
+      "name": "@better-auth/drizzle-adapter",
+      "version": "1.6.25",
+      "license": "MIT",
+      "purpose": "Drizzle adapter for better-auth over the postgres.js PostgreSQL instance in packages/auth. @better-auth/cli, @better-auth/test-utils, and vitest are intentionally excluded.",
+      "verifiedFrom": "npm registry and github.com/better-auth/better-auth (verified 2026-08-02)"
     }
   ],
   "dev": [

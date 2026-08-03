@@ -1,0 +1,16 @@
+{
+  "name": "@consulting/auth",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "dependencies": {
+    "@better-auth/drizzle-adapter": "1.6.25",
+    "better-auth": "1.6.25",
+    "drizzle-orm": "0.45.2",
+    "hono": "4.12.33",
+    "postgres": "3.4.9"
+  }
+}
