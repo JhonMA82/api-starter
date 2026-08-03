@@ -5,6 +5,28 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.4.0] - 2026-08-03
+
+### Added
+
+- Authorization (Fase 4): `@consulting/authorization` pure core with an explicit
+  `request.*` permission catalog (create/read/update/assign/review/approve/
+  reject/export/delete, no wildcards), admin/reviewer/member roles, deny-by-default
+  `authorize()`, ABAC policy functions (`canUpdateRequest`, `canApproveRequest`
+  with separation of duties, `canDeleteRequest`), and a declarative
+  `PERMISSION_MATRIX` computed from role grants.
+- Problem codes `UNAUTHORIZED` (401) and `FORBIDDEN` (403) in `packages/core`.
+- `requirePermission` middleware with the injectable `getRoles` seam in
+  `createApp(config, { auth, getRoles })` (defaults to deny), plus demo routes
+  `GET /api/v1/authorization/protected` and `GET /api/v1/authorization/admin`.
+- Audit (Fase 4): `@consulting/audit` with the append-only `audit_log` table
+  (migration 0003), a database-level append-only trigger
+  (`audit_log_append_only` / `reject_audit_log_mutation()`), and a
+  `record(input)` / `list({ limit? })` API with no update/delete surface.
+- Real-DB tests for both packages (skip when `DATABASE_URL` is unset) and
+  updated migration suites (4-migration journal); CP-B coverage extension to
+  `packages/audit/src`.
+
 ## [0.3.0] - 2026-08-03
 
 ### Added

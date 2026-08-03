@@ -1,6 +1,6 @@
 # @consulting/api-starter
 
-Plantilla reutilizable de API HTTP en **Bun 1.3.14 + Hono**, organizada como monolito modular con workspaces. Incluye validación de configuración fail-fast, modelo de errores RFC 9457, contratos OpenAPI 3.1 generados desde schemas zod, logger estructurado JSON, imagen Docker multi-stage no-root, persistencia PostgreSQL con Drizzle (Fase 2), autenticación con Better Auth (Fase 3), CI de 8 jobs y tests con umbral de cobertura.
+Plantilla reutilizable de API HTTP en **Bun 1.3.14 + Hono**, organizada como monolito modular con workspaces. Incluye validación de configuración fail-fast, modelo de errores RFC 9457, contratos OpenAPI 3.1 generados desde schemas zod, logger estructurado JSON, imagen Docker multi-stage no-root, persistencia PostgreSQL con Drizzle (Fase 2), autenticación con Better Auth (Fase 3), autorización deny-by-default y auditoría append-only (Fase 4), CI de 8 jobs y tests con umbral de cobertura.
 
 ## Quickstart
 
@@ -74,6 +74,24 @@ Los tests de autenticación contra base de datos real viven en
 `apps/api/tests/auth.test.ts` y `packages/auth/tests/auth-migrations.test.ts`; se
 saltan si `DATABASE_URL` no está definido (ver [Tests](#tests)).
 
+### Autorización (Fase 4)
+
+Autorización **deny-by-default** en el núcleo puro `packages/authorization`
+(`@consulting/authorization`, sin dependencias de runtime): catálogo explícito de
+permisos `request.*` (create/read/update/assign/review/approve/reject/export/
+delete, sin wildcards), roles `admin`/`reviewer`/`member` y funciones de política
+ABAC (`canUpdateRequest`, `canApproveRequest`, `canDeleteRequest`).
+
+- **Enforcement:** middleware `requirePermission(permission, resolveRoles)` — sin
+  sesión → `401 UNAUTHORIZED`, permiso denegado → `403 FORBIDDEN` (códigos
+  problem+json nuevos); la costura `createApp(config, { auth, getRoles })` recibe
+  el resolvedor de roles con default `async () => []`.
+- **Rutas demo:** `GET /api/v1/authorization/protected` (permiso `request.read`) y
+  `GET /api/v1/authorization/admin` (permiso `request.delete`, solo admin).
+- **Auditoría:** `packages/audit` (`@consulting/audit`) con tabla `audit_log`
+  append-only (migración 0003) protegida por trigger a nivel de base de datos;
+  API `record(input)` / `list({ limit? })` sin borrado.
+
 ### Desarrollo
 
 ```bash
@@ -92,6 +110,8 @@ Arranca `apps/api/src/server.ts` en modo watch. El servidor responde en `http://
 | GET | `/openapi.json` | Documento OpenAPI 3.1.0 generado desde los contratos |
 | GET | `/docs` | Interfaz de documentación interactiva (Scalar) |
 | GET/POST | `/api/auth/*` | Autenticación Better Auth: registro, sesión, sign-out, revocación, bearer |
+| GET | `/api/v1/authorization/protected` | Ruta demo protegida por permiso `request.read` (requiere sesión) |
+| GET | `/api/v1/authorization/admin` | Ruta demo protegida por permiso `request.delete` (solo rol admin) |
 | GET | `/api/v1/example/hello?name=...` | Módulo de ejemplo (demuestra la estructura por capas) |
 
 Los errores se devuelven como `application/problem+json` (RFC 9457) con `code`, `requestId` e `instance`.
@@ -105,9 +125,10 @@ bun run lint          # biome ci .
 bun run typecheck     # bun x tsc --noEmit
 ```
 
-Los tests de base de datos reales (`modules/notes/tests`, `apps/api/tests/auth.test.ts`
-y `packages/auth/tests/auth-migrations.test.ts`) **se saltan** si `DATABASE_URL` no está
-definido. Para ejecutarlos contra el postgres local (con `db:up` levantado), usa
+Los tests de base de datos reales (`modules/notes/tests`,
+`apps/api/tests/auth.test.ts`, `packages/auth/tests/auth-migrations.test.ts` y
+`packages/audit/tests`) **se saltan** si `DATABASE_URL` no está definido. Para
+ejecutarlos contra el postgres local (con `db:up` levantado), usa
 `--parallel=1` — los archivos de tests de DB resetean esquemas y deben correr
 serializados:
 
@@ -145,7 +166,7 @@ api/
 ├─ bunfig.toml             umbral de cobertura 0.8
 ├─ catalog/dependencies.json   registro de dependencias (versión, licencia, propósito)
 ├─ docs/architecture.md    visión, capas, matriz de portabilidad (español)
-├─ docs/decisions/         ADR 0001–0005 (inglés)
+├─ docs/decisions/         ADR 0001–0006 (inglés)
 ├─ docs/migrations-runbook.md   runbook de migraciones (español)
 ├─ migrations/             migraciones SQL commitadas + snapshots (drizzle-kit)
 ├─ scripts/db/             runners de migración y seeds (db:migrate, db:seed)
@@ -155,6 +176,8 @@ api/
 ├─ packages/contracts/     schemas zod base (triple fuente: tipos, OpenAPI, tests)
 ├─ packages/auth/          servidor de autenticación Better Auth (identidad y sesiones)
 ├─ packages/auth-client/   cliente browser-safe de Better Auth (sin Hono ni Bun)
+├─ packages/authorization/ catálogo de permisos, roles y políticas ABAC (deny by default)
+├─ packages/audit/         log de auditoría append-only (tabla + trigger + API record/list)
 └─ modules/
    ├─ example/             módulo de ejemplo por capas (domain/application/http)
    └─ notes/               módulo de referencia con persistencia (Fase 2)

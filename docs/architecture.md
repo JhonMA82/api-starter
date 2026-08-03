@@ -15,7 +15,7 @@ domain ← application ← http
 - `domain`: lógica pura, sin importaciones de Hono ni Bun, sin E/S. (ej. `modules/example/src/domain/greeting.ts`).
 - `application`: orquesta la capa `domain`; puede depender de contratos y de `packages/core`; sin Hono ni Bun.
 - `http`: rutas de Hono, validación con zod y respuesta `application/problem+json`; es la única capa que conoce el framework.
-- `packages/*`: plataforma compartida — `config` (entorno), `core` (modelo de errores RFC 9457 + contrato de logger), `contracts` (schemas zod base), `auth` (identidad y sesiones con Better Auth), `auth-client` (cliente browser-safe). Regla de límites: los paquetes no importan Hono ni Bun, con la excepción explícita de `auth` (Hono solo como tipo y better-auth) y `auth-client` (solo better-auth); `modules/*` no importan `@consulting/auth` ni `@consulting/auth-client`.
+- `packages/*`: plataforma compartida — `config` (entorno), `core` (modelo de errores RFC 9457 + contrato de logger), `contracts` (schemas zod base), `auth` (identidad y sesiones con Better Auth), `auth-client` (cliente browser-safe), `authorization` (catálogo de permisos, roles y políticas ABAC puras, deny by default), `audit` (log append-only). Regla de límites: los paquetes no importan Hono ni Bun, con la excepción explícita de `auth` (Hono solo como tipo y better-auth) y `auth-client` (solo better-auth); `authorization` es 100% puro (sin dependencias de runtime) y `audit` puede importar drizzle-orm y postgres pero no Hono ni Bun ni better-auth; `modules/*` no importan `@consulting/auth` ni `@consulting/auth-client`.
 - `apps/api`: composición — middleware pipeline, rutas base, `openapi.json` y `/docs`, bootstrap y el entrypoint `server.ts`.
 
 **Único archivo que toca APIs de Bun:** `apps/api/src/server.ts` (`Bun.serve`, shutdown con drenado). Es la frontera de portabilidad del proyecto.
@@ -59,15 +59,54 @@ cierra el cliente postgres del paquete.
   browser-safe para web) solo importa better-auth y nunca Hono ni Bun. `modules/*`
   no importan `@consulting/auth` ni `@consulting/auth-client`.
 - **Autenticación ≠ autorización:** Fase 3 responde a *quién eres*; la autorización
-  (roles, catálogo de permisos y funciones de política) queda como trabajo futuro
-  (Fase 4).
+  (roles, catálogo de permisos y funciones de política) se implementa en la
+  Fase 4 (ver [Autorización (Fase 4)](#autorización-fase-4)).
+
+## Autorización (Fase 4)
+
+La autorización responde a *qué puedes hacer* y es una preocupación separada de la
+autenticación (spec §10.2): los roles de Better Auth son identidad, no política de
+negocio. La decisión de permisos se aplica siempre en el backend; ocultar botones
+en el frontend es solo UX.
+
+- **Núcleo puro (`packages/authorization`, `@consulting/authorization`):** catálogo
+  explícito `PERMISSIONS` con 9 permisos `request.*` (create/read/update/assign/
+  review/approve/reject/export/delete, sin wildcards), roles `admin`/`reviewer`/
+  `member` con la tabla de concesiones `ROLE_PERMISSIONS`, `authorize(actor,
+  permission)` deny-by-default (roles desconocidos se ignoran, sin roles → `false`)
+  que lanza `AuthorizationError`, y funciones de política ABAC explícitas en
+  `policy.ts` (`canUpdateRequest` owner-or-draft, `canApproveRequest` submitted +
+  separación de funciones, `canDeleteRequest`). `PERMISSION_MATRIX` y
+  `rolesForPermission` se calculan desde las concesiones de roles (matriz
+  declarativa, spec §12.5) con tests que prueban que ningún permiso queda huérfano.
+- **Enforcement HTTP (`apps/api`):** middleware `requirePermission(permission,
+  resolveRoles)` — sin sesión → `401 UNAUTHORIZED`; `authorize()` falso → `403
+  FORBIDDEN` (códigos nuevos en `packages/core/src/problem.ts`); la costura
+  `createApp(config, { auth, getRoles })` recibe el resolvedor de roles, con
+  default `async () => []` (deny by default). Rutas demo documentadas:
+  `GET /api/v1/authorization/protected` (`request.read`) y
+  `GET /api/v1/authorization/admin` (`request.delete`, solo admin).
+- **Auditoría append-only (`packages/audit`, `@consulting/audit`):** tabla
+  `audit_log` (migración 0003) con id/actor_user_id/action/resource_type/
+  resource_id/outcome/metadata jsonb/created_at e índices sobre `created_at` y
+  `resource_type`; el trigger `audit_log_append_only` + la función
+  `reject_audit_log_mutation()` rechazan UPDATE/DELETE a nivel de base de datos
+  (spec §13.1: el invariante sobrevive a bugs de la aplicación).
+  `createAuditLogger(db)` expone solo `record(input)` y `list({ limit? })`
+  (más recientes primero, default 100, tope 1000) — sin API de borrado. Tests de
+  DB reales (incluido el rechazo del trigger) y extensión de cobertura CI (CP-B).
+- **Límites de capas:** `packages/authorization` es 100% puro (sin dependencias de
+  runtime); `packages/audit` puede importar drizzle-orm y postgres pero no Hono ni
+  Bun ni better-auth. La decisión de permisos vive en la capa http vía
+  `requirePermission`, nunca dentro de repositorios.
 
 ## Perfiles y fases futuras (resumen)
 
 - **Fase 0+1 (completada):** fundación — registros, ADRs, núcleo HTTP con rutas base, OpenAPI 3.1 + Scalar, módulo de ejemplo, Docker y CI de 5 jobs.
 - **Fase 2 (completada, persistencia):** PostgreSQL 17 + Drizzle ORM sobre postgres.js, migraciones SQL commitadas bajo `migrations/`, módulo `notes` de referencia con tests de DB reales, scripts `db:*` con podman, perfil `database` en Docker Compose y CI de 8 jobs. Ver ADR-0005 y `docs/migrations-runbook.md`.
 - **Fase 3 (completada, autenticación):** Better Auth 1.6.25 aislado en `packages/auth` (`@consulting/auth`) con adaptador drizzle (migración 0002: `user`/`session`/`account`/`verification`), email/contraseña y plugins `bearer()`/openAPI; cliente browser-safe `packages/auth-client`; montaje de `/api/auth/*` y middleware de sesión vía la costura `createApp(config, { auth })`; tests de DB reales y extensión de CI. Ver [Autenticación (Fase 3)](#autenticación-fase-3).
-- **Fases posteriores:** sin comprometer detalles concretos — la autorización (roles, catálogo de permisos y funciones de política) queda como Fase 4; además se prevé crecimiento hacia rutas HTTP del módulo `notes` y más módulos de negocio bajo `/api/v1`, junto con la revisión de decisiones que lo requieran (p.ej. manejo de secretos, gate de capas automatizado).
+- **Fase 4 (completada, autorización single-tenant):** catálogo explícito de permisos `request.*`, roles admin/reviewer/member y políticas ABAC en `packages/authorization` (deny by default); enforcement HTTP con `requirePermission` y la costura `getRoles` (códigos `401 UNAUTHORIZED` / `403 FORBIDDEN`, rutas demo `/api/v1/authorization/*`); auditoría append-only `audit_log` (migración 0003) con trigger de base de datos en `packages/audit`. Ver [Autorización (Fase 4)](#autorización-fase-4).
+- **Fases posteriores:** sin comprometer detalles concretos — la Fase 5 será multi-tenancy (organizaciones, membresías, roles por org y aislamiento), sobre los roles globales actuales; además se prevé crecimiento hacia rutas HTTP del módulo `notes` y más módulos de negocio bajo `/api/v1`, junto con la revisión de decisiones que lo requieran (p.ej. manejo de secretos, gate de capas automatizado).
 - **Perfil Docker `core`:** solo el servicio `api`. La base de datos vive en el perfil `database` (postgres) y no es un requisito del servidor HTTP.
 
 ## Modelo de datos y errores
