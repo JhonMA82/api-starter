@@ -5,6 +5,25 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.0] - 2026-08-03
+
+### Added
+
+- Authentication (Fase 3): Better Auth 1.6.25 isolated in `packages/auth`
+  (`@consulting/auth`) with the drizzle adapter (user/session/account/verification
+  tables), email/password, and `bearer()` + openAPI plugins.
+- Browser-safe client `packages/auth-client` (`@consulting/auth-client`) for
+  web/browser code.
+- Auth env vars: `BETTER_AUTH_SECRET` (required), `BETTER_AUTH_URL`,
+  `TRUSTED_ORIGINS`.
+- `/api/auth/*` handler and session middleware seam in `createApp(config, { auth })`
+  (`c.get("user")` / `c.get("session")`); auth OpenAPI 3.1.1 schema exposed as an
+  "Auth" source in Scalar `/docs`.
+- Migration 0002 (user/session/account/verification) with indexes and cascade FKs.
+- Real-DB auth tests (signup/signin/signout flows, cookie attributes, origin
+  security matrix, migration upgrade, boundary scan) that skip when `DATABASE_URL`
+  is unset; CI migration job extended to run the auth migration tests.
+
 ## [0.2.0] - 2026-08-02
 
 ### Added

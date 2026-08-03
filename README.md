@@ -1,6 +1,6 @@
 # @consulting/api-starter
 
-Plantilla reutilizable de API HTTP en **Bun 1.3.14 + Hono**, organizada como monolito modular con workspaces. Incluye validación de configuración fail-fast, modelo de errores RFC 9457, contratos OpenAPI 3.1 generados desde schemas zod, logger estructurado JSON, imagen Docker multi-stage no-root, persistencia PostgreSQL con Drizzle (Fase 2), CI de 8 jobs y tests con umbral de cobertura.
+Plantilla reutilizable de API HTTP en **Bun 1.3.14 + Hono**, organizada como monolito modular con workspaces. Incluye validación de configuración fail-fast, modelo de errores RFC 9457, contratos OpenAPI 3.1 generados desde schemas zod, logger estructurado JSON, imagen Docker multi-stage no-root, persistencia PostgreSQL con Drizzle (Fase 2), autenticación con Better Auth (Fase 3), CI de 8 jobs y tests con umbral de cobertura.
 
 ## Quickstart
 
@@ -17,7 +17,7 @@ bun install
 
 ### Entorno
 
-Copia `.env.example` a `.env` y ajusta los valores si es necesario. `LOG_LEVEL` y `DATABASE_URL` son obligatorios; el resto de variables tienen valores por defecto:
+Copia `.env.example` a `.env` y ajusta los valores si es necesario. `LOG_LEVEL`, `DATABASE_URL` y `BETTER_AUTH_SECRET` son obligatorios; el resto de variables tienen valores por defecto:
 
 ```bash
 cp .env.example .env
@@ -35,6 +35,9 @@ Variables disponibles (`.env.example`):
 | `HOST` | no | `0.0.0.0` | Interfaz de escucha |
 | `CORS_ORIGINS` | no | `""` (denegar todo) | Lista separada por comas de orígenes permitidos |
 | `DATABASE_URL` | **sí** | — | URL de conexión PostgreSQL (el servidor no conecta; los scripts y tests de DB sí) |
+| `BETTER_AUTH_SECRET` | **sí** | — | Secreto de firma de Better Auth (mínimo 32 caracteres) |
+| `BETTER_AUTH_URL` | no | — (usa `API_BASE_URL`) | URL base pública de autenticación |
+| `TRUSTED_ORIGINS` | no | `""` (solo el origen de `API_BASE_URL`) | Lista separada por comas de orígenes adicionales de confianza |
 
 ### Persistencia (Fase 2)
 
@@ -49,6 +52,27 @@ bun run db:down             # detiene el contenedor (el volumen se conserva)
 ```
 
 Alternativa con Docker Compose: `docker compose --profile database up -d postgres`. Guía completa de migraciones en [`docs/migrations-runbook.md`](docs/migrations-runbook.md).
+
+### Autenticación (Fase 3)
+
+Autenticación con **Better Auth 1.6.25**, aislado en el paquete `packages/auth`
+(`@consulting/auth`, servidor) y con un cliente browser-safe en `packages/auth-client`
+(`@consulting/auth-client`). Al inyectar una instancia en `createApp(config, { auth })`,
+el servidor monta las rutas de sesión bajo `/api/auth/*`:
+
+- `sign-up/email` y `sign-in/email` — registro e inicio de sesión con email y contraseña.
+- `sign-out` y `revoke-session` — cierre de sesión y revocación de sesión.
+- `get-session` — sesión actual (`user`/`session` disponibles en las rutas protegidas).
+- `open-api/generate-schema` — esquema OpenAPI 3.1.1 del subsistema, expuesto como fuente "Auth" en `/docs` (Scalar).
+
+Las sesiones viajan en cookies `HttpOnly` con `SameSite=Lax` y `Secure` bajo HTTPS;
+también se soportan tokens bearer (plugin `bearer()`). Better Auth valida el origen
+de cada petición contra el origen de `API_BASE_URL` y la lista `TRUSTED_ORIGINS`;
+los orígenes ajenos se rechazan (`403 INVALID_ORIGIN`).
+
+Los tests de autenticación contra base de datos real viven en
+`apps/api/tests/auth.test.ts` y `packages/auth/tests/auth-migrations.test.ts`; se
+saltan si `DATABASE_URL` no está definido (ver [Tests](#tests)).
 
 ### Desarrollo
 
@@ -67,6 +91,7 @@ Arranca `apps/api/src/server.ts` en modo watch. El servidor responde en `http://
 | GET | `/version` | Nombre, versión y entorno del servicio |
 | GET | `/openapi.json` | Documento OpenAPI 3.1.0 generado desde los contratos |
 | GET | `/docs` | Interfaz de documentación interactiva (Scalar) |
+| GET/POST | `/api/auth/*` | Autenticación Better Auth: registro, sesión, sign-out, revocación, bearer |
 | GET | `/api/v1/example/hello?name=...` | Módulo de ejemplo (demuestra la estructura por capas) |
 
 Los errores se devuelven como `application/problem+json` (RFC 9457) con `code`, `requestId` e `instance`.
@@ -80,10 +105,11 @@ bun run lint          # biome ci .
 bun run typecheck     # bun x tsc --noEmit
 ```
 
-Los tests de base de datos reales (`modules/notes/tests`) **se saltan** si
-`DATABASE_URL` no está definido. Para ejecutarlos contra el postgres local
-(con `db:up` levantado), usa `--parallel=1` — los archivos de tests de DB
-resetean esquemas y deben correr serializados:
+Los tests de base de datos reales (`modules/notes/tests`, `apps/api/tests/auth.test.ts`
+y `packages/auth/tests/auth-migrations.test.ts`) **se saltan** si `DATABASE_URL` no está
+definido. Para ejecutarlos contra el postgres local (con `db:up` levantado), usa
+`--parallel=1` — los archivos de tests de DB resetean esquemas y deben correr
+serializados:
 
 ```bash
 DATABASE_URL=postgres://postgres:postgres@localhost:5432/api bun test --parallel=1
@@ -127,6 +153,8 @@ api/
 ├─ packages/config/        validación fail-fast de entorno (zod)
 ├─ packages/core/          modelo de errores RFC 9457 + contrato de logger
 ├─ packages/contracts/     schemas zod base (triple fuente: tipos, OpenAPI, tests)
+├─ packages/auth/          servidor de autenticación Better Auth (identidad y sesiones)
+├─ packages/auth-client/   cliente browser-safe de Better Auth (sin Hono ni Bun)
 └─ modules/
    ├─ example/             módulo de ejemplo por capas (domain/application/http)
    └─ notes/               módulo de referencia con persistencia (Fase 2)

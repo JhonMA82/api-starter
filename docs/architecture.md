@@ -15,7 +15,7 @@ domain ← application ← http
 - `domain`: lógica pura, sin importaciones de Hono ni Bun, sin E/S. (ej. `modules/example/src/domain/greeting.ts`).
 - `application`: orquesta la capa `domain`; puede depender de contratos y de `packages/core`; sin Hono ni Bun.
 - `http`: rutas de Hono, validación con zod y respuesta `application/problem+json`; es la única capa que conoce el framework.
-- `packages/*`: plataforma compartida — `config` (entorno), `core` (modelo de errores RFC 9457 + contrato de logger), `contracts` (schemas zod base). Los paquetes no importan Hono ni Bun.
+- `packages/*`: plataforma compartida — `config` (entorno), `core` (modelo de errores RFC 9457 + contrato de logger), `contracts` (schemas zod base), `auth` (identidad y sesiones con Better Auth), `auth-client` (cliente browser-safe). Regla de límites: los paquetes no importan Hono ni Bun, con la excepción explícita de `auth` (Hono solo como tipo y better-auth) y `auth-client` (solo better-auth); `modules/*` no importan `@consulting/auth` ni `@consulting/auth-client`.
 - `apps/api`: composición — middleware pipeline, rutas base, `openapi.json` y `/docs`, bootstrap y el entrypoint `server.ts`.
 
 **Único archivo que toca APIs de Bun:** `apps/api/src/server.ts` (`Bun.serve`, shutdown con drenado). Es la frontera de portabilidad del proyecto.
@@ -34,11 +34,40 @@ domain ← application ← http
 
 La ruta Node vía `@hono/node-server` está **documentada, no instalada**: el único archivo a tocar sería `apps/api/src/server.ts`, porque el resto del código no depende de Bun. Ver ADR-0001 para la política de toolchain y su revisión en Fase 2.
 
+## Autenticación (Fase 3)
+
+Better Auth 1.6.25 queda aislado en `packages/auth` (`@consulting/auth`): un único
+export `createAuth(options)` que devuelve `{ handler, sessionMiddleware, getSession, close }`,
+usando el adaptador drizzle sobre la migración 0002 (tablas `user`/`session`/`account`/
+`verification`) con email/contraseña y los plugins `bearer()` y openAPI. `close()`
+cierra el cliente postgres del paquete.
+
+- **Costura de inyección:** `createApp(config, { auth })` recibe la instancia como
+  dependencia opcional. Cuando está presente, monta
+  `app.on(["POST", "GET"], "/api/auth/*", auth.handler)` **después** de la cadena de
+  middleware (requestId → jsonLogger → secureHeaders → cors → bodyLimit → timeout →
+  compress) e inyecta el middleware de sesión; las rutas leen `c.get("user")` y
+  `c.get("session")` (`null` sin sesión).
+- **Sesión y credenciales:** cookies `HttpOnly`, `SameSite=Lax` y `Secure` bajo HTTPS;
+  tokens bearer con el plugin `bearer()`; el esquema OpenAPI 3.1.1 del subsistema se
+  expone como fuente "Auth" en Scalar `/docs`.
+- **Política de orígenes:** los orígenes de cada petición se validan contra el origen
+  de `API_BASE_URL` y la lista `TRUSTED_ORIGINS`; los ajenos se rechazan
+  (`403 INVALID_ORIGIN`).
+- **Límites de capas:** `packages/auth` es la única excepción de `packages/*` que
+  importa Hono (solo tipos) y better-auth; `packages/auth-client` (cliente
+  browser-safe para web) solo importa better-auth y nunca Hono ni Bun. `modules/*`
+  no importan `@consulting/auth` ni `@consulting/auth-client`.
+- **Autenticación ≠ autorización:** Fase 3 responde a *quién eres*; la autorización
+  (roles, catálogo de permisos y funciones de política) queda como trabajo futuro
+  (Fase 4).
+
 ## Perfiles y fases futuras (resumen)
 
 - **Fase 0+1 (completada):** fundación — registros, ADRs, núcleo HTTP con rutas base, OpenAPI 3.1 + Scalar, módulo de ejemplo, Docker y CI de 5 jobs.
 - **Fase 2 (completada, persistencia):** PostgreSQL 17 + Drizzle ORM sobre postgres.js, migraciones SQL commitadas bajo `migrations/`, módulo `notes` de referencia con tests de DB reales, scripts `db:*` con podman, perfil `database` en Docker Compose y CI de 8 jobs. Ver ADR-0005 y `docs/migrations-runbook.md`.
-- **Fases posteriores:** sin comprometer detalles concretos — se prevé crecimiento hacia autenticación, rutas HTTP del módulo `notes` y más módulos de negocio bajo `/api/v1`, junto con la revisión de decisiones que lo requieran (p.ej. manejo de secretos, gate de capas automatizado).
+- **Fase 3 (completada, autenticación):** Better Auth 1.6.25 aislado en `packages/auth` (`@consulting/auth`) con adaptador drizzle (migración 0002: `user`/`session`/`account`/`verification`), email/contraseña y plugins `bearer()`/openAPI; cliente browser-safe `packages/auth-client`; montaje de `/api/auth/*` y middleware de sesión vía la costura `createApp(config, { auth })`; tests de DB reales y extensión de CI. Ver [Autenticación (Fase 3)](#autenticación-fase-3).
+- **Fases posteriores:** sin comprometer detalles concretos — la autorización (roles, catálogo de permisos y funciones de política) queda como Fase 4; además se prevé crecimiento hacia rutas HTTP del módulo `notes` y más módulos de negocio bajo `/api/v1`, junto con la revisión de decisiones que lo requieran (p.ej. manejo de secretos, gate de capas automatizado).
 - **Perfil Docker `core`:** solo el servicio `api`. La base de datos vive en el perfil `database` (postgres) y no es un requisito del servidor HTTP.
 
 ## Modelo de datos y errores
