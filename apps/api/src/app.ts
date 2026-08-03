@@ -7,6 +7,7 @@ import { cors } from "hono/cors";
 import { requestId } from "hono/request-id";
 import { secureHeaders } from "hono/secure-headers";
 import { timeout } from "hono/timeout";
+import type { RoleResolver } from "./http/authorization";
 import { notFound, onError } from "./http/errors";
 import { jsonLogger } from "./http/logger";
 import { createRoutes } from "./routes";
@@ -18,7 +19,7 @@ import { createRoutes } from "./routes";
  */
 export function createApp(
   config: Config,
-  options: { auth?: Auth } = {},
+  options: { auth?: Auth; getRoles?: RoleResolver } = {},
 ): Hono<{
   Variables: AuthVariables;
 }> {
@@ -31,6 +32,7 @@ export function createApp(
       trustedOrigins: [...config.TRUSTED_ORIGINS, new URL(baseURL).origin],
       databaseUrl: config.DATABASE_URL,
     });
+  const getRoles: RoleResolver = options.getRoles ?? (async () => []);
   const app = new Hono<{ Variables: AuthVariables }>();
 
   app.use(requestId());
@@ -44,7 +46,7 @@ export function createApp(
 
   app.on(["POST", "GET"], "/api/auth/*", (c) => auth.handler(c.req.raw));
 
-  app.route("/", createRoutes(config));
+  app.route("/", createRoutes(config, { getRoles }));
 
   app.notFound(notFound);
   app.onError(onError);

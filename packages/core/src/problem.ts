@@ -4,6 +4,8 @@ export const ERROR_CODES = [
   "BODY_TOO_LARGE",
   "REQUEST_TIMEOUT",
   "INTERNAL_ERROR",
+  "UNAUTHORIZED",
+  "FORBIDDEN",
 ] as const;
 
 export type ErrorCode = (typeof ERROR_CODES)[number];
@@ -35,6 +37,8 @@ export interface BuildProblemDetailsInput {
 
 const TITLES: Record<number, string> = {
   400: "Bad Request",
+  401: "Unauthorized",
+  403: "Forbidden",
   404: "Not Found",
   408: "Request Timeout",
   413: "Payload Too Large",
@@ -49,6 +53,10 @@ export function statusToCode(status: number): ErrorCode {
   switch (status) {
     case 400:
       return "VALIDATION_FAILED";
+    case 401:
+      return "UNAUTHORIZED";
+    case 403:
+      return "FORBIDDEN";
     case 404:
       return "NOT_FOUND";
     case 408:

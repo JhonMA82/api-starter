@@ -8,6 +8,7 @@
   },
   "dependencies": {
     "@consulting/auth": "workspace:*",
+    "@consulting/authorization": "workspace:*",
     "@consulting/config": "workspace:*",
     "@consulting/contracts": "workspace:*",
     "@consulting/core": "workspace:*",

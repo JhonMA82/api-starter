@@ -20,6 +20,7 @@
       "version": "0.1.0",
       "dependencies": {
         "@consulting/auth": "workspace:*",
+        "@consulting/authorization": "workspace:*",
         "@consulting/config": "workspace:*",
         "@consulting/contracts": "workspace:*",
         "@consulting/core": "workspace:*",
@@ -72,6 +73,10 @@
       "dependencies": {
         "better-auth": "1.6.25",
       },
+    },
+    "packages/authorization": {
+      "name": "@consulting/authorization",
+      "version": "0.1.0",
     },
     "packages/config": {
       "name": "@consulting/config",
@@ -135,6 +140,8 @@
     "@consulting/auth": ["@consulting/auth@workspace:packages/auth"],
 
     "@consulting/auth-client": ["@consulting/auth-client@workspace:packages/auth-client"],
+
+    "@consulting/authorization": ["@consulting/authorization@workspace:packages/authorization"],
 
     "@consulting/config": ["@consulting/config@workspace:packages/config"],
 

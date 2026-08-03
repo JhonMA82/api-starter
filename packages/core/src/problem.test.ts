@@ -11,6 +11,8 @@ import {
 describe("titleFromStatus", () => {
   test("derives titles from known statuses", () => {
     expect(titleFromStatus(400)).toBe("Bad Request");
+    expect(titleFromStatus(401)).toBe("Unauthorized");
+    expect(titleFromStatus(403)).toBe("Forbidden");
     expect(titleFromStatus(404)).toBe("Not Found");
     expect(titleFromStatus(408)).toBe("Request Timeout");
     expect(titleFromStatus(413)).toBe("Payload Too Large");
@@ -28,6 +30,11 @@ describe("statusToCode", () => {
     expect(statusToCode(404)).toBe("NOT_FOUND");
   });
 
+  test("maps 401 and 403 to their codes", () => {
+    expect(statusToCode(401)).toBe("UNAUTHORIZED");
+    expect(statusToCode(403)).toBe("FORBIDDEN");
+  });
+
   test("maps 408 and 413 to their codes", () => {
     expect(statusToCode(408)).toBe("REQUEST_TIMEOUT");
     expect(statusToCode(413)).toBe("BODY_TOO_LARGE");
@@ -36,7 +43,7 @@ describe("statusToCode", () => {
   test("maps everything else to generic INTERNAL_ERROR", () => {
     expect(statusToCode(500)).toBe("INTERNAL_ERROR");
     expect(statusToCode(503)).toBe("INTERNAL_ERROR");
-    expect(statusToCode(401)).toBe("INTERNAL_ERROR");
+    expect(statusToCode(418)).toBe("INTERNAL_ERROR");
   });
 });
 
@@ -121,6 +128,8 @@ describe("ERROR_CODES", () => {
       "BODY_TOO_LARGE",
       "REQUEST_TIMEOUT",
       "INTERNAL_ERROR",
+      "UNAUTHORIZED",
+      "FORBIDDEN",
     ]);
   });
 });

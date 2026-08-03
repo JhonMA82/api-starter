@@ -247,7 +247,8 @@ describeDb("authenticated API (real database)", () => {
       ProblemDetailsSchema.parse(problem);
       expect(problem).toMatchObject({
         status: 401,
-        code: "INTERNAL_ERROR",
+        // 401 now maps to UNAUTHORIZED in statusToCode (Fase 4 WU2)
+        code: "UNAUTHORIZED",
         instance: "/api/v1/auth-required",
       });
       expect(JSON.stringify(problem)).not.toContain("stack");
