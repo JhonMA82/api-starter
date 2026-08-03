@@ -1,6 +1,6 @@
 import { afterAll, beforeAll, describe, expect, test, vi } from "bun:test";
 
-import { createClient, createDb, createUnitOfWork, updateNote } from "../src";
+import { createDb, createUnitOfWork, updateNote } from "../src";
 import type { NoteRepository, UnitOfWork, UpdateNoteInput } from "../src/application/ports";
 import type { Note } from "../src/domain/note.entity";
 import { InvalidNoteError, NoteNotFoundError } from "../src/domain/note.errors";
