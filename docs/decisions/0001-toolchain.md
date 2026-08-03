@@ -62,3 +62,14 @@ Version pinning applies to the whole toolchain: `.bun-version` = `1.3.14`,
 Revisit this ADR at **Fase 2**, when Drizzle Kit (or any native/Node-FFI
 tooling) enters the toolchain, or earlier if the TypeScript 7.x typecheck
 binary proves unusable and the 5.9.3 fallback must be activated.
+
+## Fase 2 revisit (2026-08-02): PASS - Drizzle Kit enters the toolchain
+
+drizzle-orm 0.45.2 + drizzle-kit 0.31.10 + postgres 3.4.9 verified with
+TypeScript 7.0.2 (`bun x tsc --noEmit` exit 0, including schema, repository,
+and transaction code under the repo's strict flags). WITHOUT `skipLibCheck`,
+TS 7.0.2 reports ~40 errors INSIDE drizzle `.d.ts` files (missing optional
+peers `gel`/`mysql2` as TS2307; strict generic violations) - all internal to
+`node_modules`, none caused by our code. Verdict: keep **TypeScript 7.0.2 +
+`skipLibCheck: true`**; the 5.9.3 fallback is NOT activated. See ADR-0005 for
+the persistence decision itself.

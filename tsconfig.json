@@ -15,6 +15,7 @@
       "@consulting/*": ["./packages/*/src", "./modules/*/src"]
     },
     "noEmit": true,
+    // skipLibCheck: true is load-bearing for drizzle .d.ts (ADR-0001 revisit) — do not remove
     "skipLibCheck": true,
     "isolatedModules": true
   },
