@@ -36,9 +36,10 @@ La ruta Node vía `@hono/node-server` está **documentada, no instalada**: el ú
 
 ## Perfiles y fases futuras (resumen)
 
-- **Fase 0+1 (actual):** fundación — registros, ADRs, núcleo HTTP con rutas base, OpenAPI 3.1 + Scalar, módulo de ejemplo, Docker y CI de 5 jobs.
-- **Fase 2 y posteriores:** sin comprometer detalles concretos — se prevé crecimiento hacia autenticación, persistencia y más módulos de negocio bajo `/api/v1`, junto con la revisión de decisiones que lo requieran (p.ej. toolchain de datos, manejo de secretos, gate de capas automatizado).
-- **Perfil Docker `core`:** solo el servicio `api`. Cualquier servicio adicional (base de datos, caché, workers) se declarará en perfiles futuros; esta fundación no los asume.
+- **Fase 0+1 (completada):** fundación — registros, ADRs, núcleo HTTP con rutas base, OpenAPI 3.1 + Scalar, módulo de ejemplo, Docker y CI de 5 jobs.
+- **Fase 2 (completada, persistencia):** PostgreSQL 17 + Drizzle ORM sobre postgres.js, migraciones SQL commitadas bajo `migrations/`, módulo `notes` de referencia con tests de DB reales, scripts `db:*` con podman, perfil `database` en Docker Compose y CI de 8 jobs. Ver ADR-0005 y `docs/migrations-runbook.md`.
+- **Fases posteriores:** sin comprometer detalles concretos — se prevé crecimiento hacia autenticación, rutas HTTP del módulo `notes` y más módulos de negocio bajo `/api/v1`, junto con la revisión de decisiones que lo requieran (p.ej. manejo de secretos, gate de capas automatizado).
+- **Perfil Docker `core`:** solo el servicio `api`. La base de datos vive en el perfil `database` (postgres) y no es un requisito del servidor HTTP.
 
 ## Modelo de datos y errores
 

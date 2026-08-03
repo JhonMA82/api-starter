@@ -35,11 +35,16 @@ Convenciones del repositorio para agentes de IA y colaboradores humanos.
 | `bun test --coverage` | con umbral global 0.8 (`bunfig.toml`) |
 | `bun x tsc --noEmit` | verificación de tipos directa |
 | `bun test apps/api/tests/openapi.test.ts` | contrato OpenAPI (toda ruta documentada) |
+| `bun run db:up` / `db:down` | levantar/detener postgres 17 local (podman, contenedor `api-pg`) |
+| `bun run db:migrate` | aplicar migraciones pendientes (idempotente) |
+| `bun run db:generate` | regenerar migraciones desde los schemas (gate de drift en CI) |
+| `bun run db:seed` | datos semilla (idempotente) |
+| `DATABASE_URL=... bun test --parallel=1` | tests de DB reales, serializados (CP-C) |
 
 ## Qué no editar
 
 - `bun.lock` (solo regenerar vía `bun install`).
-- Migraciones futuras (aún no existen; la primera decisión de toolchain de datos es Fase 2 — ver ADR-0001).
+- Migraciones ya aplicadas: append-only (nunca editarlas; correcciones = nueva migración — ver docs/migrations-runbook.md).
 - `catalog/dependencies.json` fuera del flujo de pin/registro (actualizarlo con propósito y licencia verificada).
 - ADR ya aceptados: modificarlos solo con un ADR nuevo o en el flujo de revisión explícito.
 

@@ -1,6 +1,6 @@
 # @consulting/api-starter
 
-Plantilla reutilizable de API HTTP en **Bun 1.3.14 + Hono**, organizada como monolito modular con workspaces. Incluye validación de configuración fail-fast, modelo de errores RFC 9457, contratos OpenAPI 3.1 generados desde schemas zod, logger estructurado JSON, imagen Docker multi-stage no-root, CI de 5 jobs y tests con umbral de cobertura.
+Plantilla reutilizable de API HTTP en **Bun 1.3.14 + Hono**, organizada como monolito modular con workspaces. Incluye validación de configuración fail-fast, modelo de errores RFC 9457, contratos OpenAPI 3.1 generados desde schemas zod, logger estructurado JSON, imagen Docker multi-stage no-root, persistencia PostgreSQL con Drizzle (Fase 2), CI de 8 jobs y tests con umbral de cobertura.
 
 ## Quickstart
 
@@ -17,7 +17,7 @@ bun install
 
 ### Entorno
 
-Copia `.env.example` a `.env` y ajusta los valores si es necesario. `LOG_LEVEL` es obligatorio; el resto de variables tienen valores por defecto:
+Copia `.env.example` a `.env` y ajusta los valores si es necesario. `LOG_LEVEL` y `DATABASE_URL` son obligatorios; el resto de variables tienen valores por defecto:
 
 ```bash
 cp .env.example .env
@@ -34,6 +34,21 @@ Variables disponibles (`.env.example`):
 | `PORT` | no | `3000` | Puerto HTTP (1–65535) |
 | `HOST` | no | `0.0.0.0` | Interfaz de escucha |
 | `CORS_ORIGINS` | no | `""` (denegar todo) | Lista separada por comas de orígenes permitidos |
+| `DATABASE_URL` | **sí** | — | URL de conexión PostgreSQL (el servidor no conecta; los scripts y tests de DB sí) |
+
+### Persistencia (Fase 2)
+
+PostgreSQL 17 + Drizzle ORM, con migraciones SQL commitadas. Requiere podman (o Docker, ver runbook) y el contenedor se gestiona con scripts de `package.json`:
+
+```bash
+cp .env.example .env        # asegura DATABASE_URL
+bun run db:up               # levanta postgres 17 (contenedor api-pg, volumen api-pg-data)
+bun run db:migrate          # aplica las migraciones pendientes (idempotente)
+bun run db:seed             # datos semilla (re-ejecutar inserta 0 filas)
+bun run db:down             # detiene el contenedor (el volumen se conserva)
+```
+
+Alternativa con Docker Compose: `docker compose --profile database up -d postgres`. Guía completa de migraciones en [`docs/migrations-runbook.md`](docs/migrations-runbook.md).
 
 ### Desarrollo
 
@@ -65,6 +80,15 @@ bun run lint          # biome ci .
 bun run typecheck     # bun x tsc --noEmit
 ```
 
+Los tests de base de datos reales (`modules/notes/tests`) **se saltan** si
+`DATABASE_URL` no está definido. Para ejecutarlos contra el postgres local
+(con `db:up` levantado), usa `--parallel=1` — los archivos de tests de DB
+resetean esquemas y deben correr serializados:
+
+```bash
+DATABASE_URL=postgres://postgres:postgres@localhost:5432/api bun test --parallel=1
+```
+
 ### Docker
 
 ```bash
@@ -82,7 +106,7 @@ docker compose --profile core up
 
 ### CI
 
-Cada pull request pasa por `.github/workflows/ci.yml`: 5 jobs (`lint`, `typecheck`, `test`, `openapi-validation`, `docker-build`) con acciones fijadas por tag completo y `bun install --frozen-lockfile`.
+Cada pull request pasa por `.github/workflows/ci.yml`: 8 jobs (`lint`, `typecheck`, `test`, `openapi-validation`, `docker-build`, `migrations-check`, `integration-test`, `migration-test`) con acciones fijadas por tag completo y `bun install --frozen-lockfile`. `integration-test` y `migration-test` corren con un servicio `postgres:17-alpine` y health check `pg_isready`; `migrations-check` detecta drift entre schema y migraciones commitadas.
 
 ### Estructura del repositorio
 
@@ -91,16 +115,21 @@ api/
 ├─ .bun-version            versión de Bun fijada (1.3.14)
 ├─ .env.example            plantilla de entorno (sin secretos)
 ├─ Dockerfile              imagen multi-stage no-root
-├─ docker-compose.yml      perfil "core": solo api
+├─ docker-compose.yml      perfiles "core" (api) y "database" (postgres)
 ├─ bunfig.toml             umbral de cobertura 0.8
 ├─ catalog/dependencies.json   registro de dependencias (versión, licencia, propósito)
 ├─ docs/architecture.md    visión, capas, matriz de portabilidad (español)
-├─ docs/decisions/         ADR 0001–0004 (inglés)
+├─ docs/decisions/         ADR 0001–0005 (inglés)
+├─ docs/migrations-runbook.md   runbook de migraciones (español)
+├─ migrations/             migraciones SQL commitadas + snapshots (drizzle-kit)
+├─ scripts/db/             runners de migración y seeds (db:migrate, db:seed)
 ├─ apps/api/               aplicación HTTP (middleware, rutas base, bootstrap, server)
 ├─ packages/config/        validación fail-fast de entorno (zod)
 ├─ packages/core/          modelo de errores RFC 9457 + contrato de logger
 ├─ packages/contracts/     schemas zod base (triple fuente: tipos, OpenAPI, tests)
-└─ modules/example/        módulo de ejemplo por capas (domain/application/http)
+└─ modules/
+   ├─ example/             módulo de ejemplo por capas (domain/application/http)
+   └─ notes/               módulo de referencia con persistencia (Fase 2)
 ```
 
 ## Convenciones
