@@ -6,6 +6,7 @@ export const ERROR_CODES = [
   "INTERNAL_ERROR",
   "UNAUTHORIZED",
   "FORBIDDEN",
+  "CONFLICT",
 ] as const;
 
 export type ErrorCode = (typeof ERROR_CODES)[number];
@@ -41,6 +42,7 @@ const TITLES: Record<number, string> = {
   403: "Forbidden",
   404: "Not Found",
   408: "Request Timeout",
+  409: "Conflict",
   413: "Payload Too Large",
   500: "Internal Server Error",
 };
@@ -61,6 +63,8 @@ export function statusToCode(status: number): ErrorCode {
       return "NOT_FOUND";
     case 408:
       return "REQUEST_TIMEOUT";
+    case 409:
+      return "CONFLICT";
     case 413:
       return "BODY_TOO_LARGE";
     default:

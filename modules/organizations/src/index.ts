@@ -81,6 +81,16 @@ export {
 export type { TenantContext } from "./domain/tenant-context";
 export { createTenantContext } from "./domain/tenant-context";
 export {
+  createOrganizationRoutes,
+  type OrganizationRoutesDeps,
+} from "./http/organization.routes";
+export {
+  createTenantContextMiddleware,
+  ORGANIZATION_ID_HEADER,
+  type OrganizationHttpVariables,
+  type TenantMiddlewareDeps,
+} from "./http/tenant-middleware";
+export {
   createClient,
   createDb,
   createInvitationRepository,

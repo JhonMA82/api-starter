@@ -7,6 +7,14 @@ import {
   VersionResponse,
 } from "@consulting/contracts";
 import { exampleRoutes } from "@consulting/module-example";
+import {
+  createOrganizationRoutes,
+  createTenancyService,
+  type InvitationRepository,
+  type MembershipRepository,
+  type OrganizationRepository,
+  type UnitOfWork,
+} from "@consulting/module-organizations";
 import { apiReference } from "@scalar/hono-api-reference";
 import { Hono } from "hono";
 import { HTTPException } from "hono/http-exception";
@@ -32,9 +40,18 @@ function protectedResponses() {
   };
 }
 
+export interface OrganizationsHttpOptions {
+  repositories: {
+    organizations: OrganizationRepository;
+    memberships: MembershipRepository;
+    invitations: InvitationRepository;
+    uow: UnitOfWork | null;
+  };
+}
+
 export function createRoutes(
   config: Config,
-  options: { getRoles?: RoleResolver } = {},
+  options: { getRoles?: RoleResolver; organizations?: OrganizationsHttpOptions } = {},
 ): Hono<{ Variables: AuthVariables }> {
   const getRoles = options.getRoles ?? (async () => []);
   const app = new Hono<{ Variables: AuthVariables }>();
@@ -93,6 +110,14 @@ export function createRoutes(
   );
 
   app.route("/api/v1", exampleRoutes);
+
+  if (options.organizations !== undefined) {
+    const organizationsRoutes = createOrganizationRoutes({
+      tenancy: createTenancyService(options.organizations.repositories),
+      ...options.organizations.repositories,
+    });
+    app.route("/api/v1", organizationsRoutes);
+  }
 
   app.get(
     "/api/v1/authorization/protected",

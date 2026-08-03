@@ -15,6 +15,7 @@ describe("titleFromStatus", () => {
     expect(titleFromStatus(403)).toBe("Forbidden");
     expect(titleFromStatus(404)).toBe("Not Found");
     expect(titleFromStatus(408)).toBe("Request Timeout");
+    expect(titleFromStatus(409)).toBe("Conflict");
     expect(titleFromStatus(413)).toBe("Payload Too Large");
     expect(titleFromStatus(500)).toBe("Internal Server Error");
   });
@@ -38,6 +39,10 @@ describe("statusToCode", () => {
   test("maps 408 and 413 to their codes", () => {
     expect(statusToCode(408)).toBe("REQUEST_TIMEOUT");
     expect(statusToCode(413)).toBe("BODY_TOO_LARGE");
+  });
+
+  test("maps 409 to CONFLICT", () => {
+    expect(statusToCode(409)).toBe("CONFLICT");
   });
 
   test("maps everything else to generic INTERNAL_ERROR", () => {
@@ -130,6 +135,7 @@ describe("ERROR_CODES", () => {
       "INTERNAL_ERROR",
       "UNAUTHORIZED",
       "FORBIDDEN",
+      "CONFLICT",
     ]);
   });
 });

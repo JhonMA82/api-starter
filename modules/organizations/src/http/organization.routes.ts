@@ -1,0 +1,359 @@
+import { ProblemDetailsSchema } from "@consulting/contracts";
+import { buildProblemDetails, mapValidationIssues, type ValidationIssue } from "@consulting/core";
+import { sValidator } from "@hono/standard-validator";
+import type { Context } from "hono";
+import { Hono } from "hono";
+import { HTTPException } from "hono/http-exception";
+import { describeRoute, resolver } from "hono-openapi";
+import { z } from "zod";
+
+import { acceptInvitationUseCase } from "../application/accept-invitation";
+import {
+  type CreateOrganizationDeps,
+  createOrganizationUseCase,
+} from "../application/create-organization";
+import { inviteMemberUseCase } from "../application/invite-member";
+import type {
+  InvitationRepository,
+  MembershipRepository,
+  OrganizationRepository,
+  UnitOfWork,
+} from "../application/ports";
+import { suspendOrganizationUseCase } from "../application/suspend-organization";
+import type { TenancyService } from "../application/tenancy-service";
+import { transferOwnershipUseCase } from "../application/transfer-ownership";
+import type { Invitation } from "../domain/invitation.entity";
+import type { Membership } from "../domain/membership.entity";
+import type { Organization } from "../domain/organization.entity";
+import type { TenantContext } from "../domain/tenant-context";
+import { toHttpException } from "./errors";
+import {
+  AcceptInvitationBody,
+  CreateOrganizationBody,
+  InvitationResponse,
+  type InvitationResponse as InvitationResponseType,
+  InviteMemberBody,
+  MembershipResponse,
+  type MembershipResponse as MembershipResponseType,
+  OrganizationResponse,
+  type OrganizationResponse as OrganizationResponseType,
+  TenantContextResponse,
+  type TenantContextResponse as TenantContextResponseType,
+  TransferOwnershipBody,
+} from "./schemas";
+import { createTenantContextMiddleware, type OrganizationHttpVariables } from "./tenant-middleware";
+
+const PROBLEM_JSON = { "content-type": "application/problem+json" } as const;
+const problem = { "application/problem+json": { schema: resolver(ProblemDetailsSchema) } };
+
+function validationResponses() {
+  return {
+    400: { description: "Validation failed", content: problem },
+    500: { description: "Internal error", content: problem },
+  };
+}
+
+function sessionResponses() {
+  return {
+    ...validationResponses(),
+    401: { description: "Missing or invalid session", content: problem },
+  };
+}
+
+function tenantResponses() {
+  return {
+    ...sessionResponses(),
+    403: {
+      description: "Insufficient permissions or no access to the organization",
+      content: problem,
+    },
+    404: { description: "Organization not found", content: problem },
+  };
+}
+
+function validationErrorHandler(
+  result: { success: true } | { success: false; error: readonly ValidationIssue[] },
+  c: Context,
+): Response | undefined {
+  if (result.success) {
+    return undefined;
+  }
+  return c.json(
+    buildProblemDetails({
+      status: 400,
+      code: "VALIDATION_FAILED",
+      errors: mapValidationIssues(result.error),
+      requestId: c.get("requestId"),
+      instance: c.req.path,
+    }),
+    400,
+    PROBLEM_JSON,
+  );
+}
+
+function toOrganizationResponse(org: Organization): OrganizationResponseType {
+  return {
+    id: org.id,
+    name: org.name,
+    slug: org.slug,
+    status: org.status,
+    createdAt: org.createdAt.toISOString(),
+    updatedAt: org.updatedAt.toISOString(),
+  };
+}
+
+function toMembershipResponse(membership: Membership): MembershipResponseType {
+  return {
+    id: membership.id,
+    organizationId: membership.organizationId,
+    userId: membership.userId,
+    role: membership.role,
+    status: membership.status,
+    createdAt: membership.createdAt.toISOString(),
+    updatedAt: membership.updatedAt.toISOString(),
+  };
+}
+
+function toInvitationResponse(invitation: Invitation): InvitationResponseType {
+  return {
+    id: invitation.id,
+    organizationId: invitation.organizationId,
+    email: invitation.email,
+    role: invitation.role,
+    expiresAt: invitation.expiresAt.toISOString(),
+    createdAt: invitation.createdAt.toISOString(),
+  };
+}
+
+function toTenantContextResponse(tenant: TenantContext): TenantContextResponseType {
+  return {
+    organizationId: tenant.organizationId,
+    membershipId: tenant.membershipId,
+    userId: tenant.userId,
+    roleIds: tenant.roleIds,
+  };
+}
+
+export interface OrganizationRoutesDeps {
+  tenancy: TenancyService;
+  organizations: OrganizationRepository;
+  memberships: MembershipRepository;
+  invitations: InvitationRepository;
+  uow: UnitOfWork | null;
+}
+
+export function createOrganizationRoutes(
+  deps: OrganizationRoutesDeps,
+): Hono<{ Variables: OrganizationHttpVariables }> {
+  const app = new Hono<{ Variables: OrganizationHttpVariables }>();
+  const tenantContext = createTenantContextMiddleware({ tenancy: deps.tenancy });
+
+  const createOrganizationDeps: CreateOrganizationDeps =
+    deps.uow === null
+      ? { organizations: deps.organizations, memberships: deps.memberships }
+      : { organizations: deps.organizations, memberships: deps.memberships, uow: deps.uow };
+  const createOrganization = createOrganizationUseCase(createOrganizationDeps);
+  const inviteMember = inviteMemberUseCase(deps);
+  const acceptInvitation = acceptInvitationUseCase(deps);
+  const transferOwnership = transferOwnershipUseCase(deps);
+  const suspendOrganization = suspendOrganizationUseCase(deps);
+
+  app.post(
+    "/organizations",
+    describeRoute({
+      description: "Creates an organization owned by the authenticated user",
+      responses: {
+        201: {
+          description: "Organization created",
+          content: { "application/json": { schema: resolver(OrganizationResponse) } },
+        },
+        409: { description: "Slug already in use", content: problem },
+        ...sessionResponses(),
+      },
+    }),
+    sValidator("json", CreateOrganizationBody, validationErrorHandler),
+    async (c) => {
+      const user = c.get("user");
+      if (user === null) {
+        throw new HTTPException(401);
+      }
+      const { name, slug } = c.req.valid("json");
+      try {
+        const organization = await createOrganization({ name, slug, ownerUserId: user.id });
+        return c.json(toOrganizationResponse(organization), 201);
+      } catch (error) {
+        throw toHttpException(error);
+      }
+    },
+  );
+
+  app.get(
+    "/organizations/:id",
+    describeRoute({
+      description:
+        "Resolves and returns the caller's tenant context for the organization selected via the x-organization-id header",
+      responses: {
+        200: {
+          description: "Tenant context of the caller within the organization",
+          content: { "application/json": { schema: resolver(TenantContextResponse) } },
+        },
+        ...tenantResponses(),
+      },
+    }),
+    tenantContext,
+    (c) => c.json(toTenantContextResponse(c.get("tenant")), 200),
+  );
+
+  app.post(
+    "/organizations/:id/invitations",
+    describeRoute({
+      description: "Invites a member by email; the raw one-time token is returned exactly once",
+      responses: {
+        201: {
+          description: "Invitation created with its one-time token",
+          content: {
+            "application/json": {
+              schema: resolver(
+                z.object({ invitation: InvitationResponse, token: z.string().min(64) }),
+              ),
+            },
+          },
+        },
+        ...tenantResponses(),
+      },
+    }),
+    tenantContext,
+    sValidator("json", InviteMemberBody, validationErrorHandler),
+    async (c) => {
+      const user = c.get("user");
+      if (user === null) {
+        throw new HTTPException(401);
+      }
+      const { email, role } = c.req.valid("json");
+      try {
+        const { invitation, token } = await inviteMember({
+          actorUserId: user.id,
+          // The route pattern guarantees the :id segment; the middleware chain
+          // widens the path type so Hono's fallback overload returns string | undefined.
+          organizationId: c.req.param("id") as string,
+          email,
+          role,
+        });
+        return c.json({ invitation: toInvitationResponse(invitation), token }, 201);
+      } catch (error) {
+        throw toHttpException(error);
+      }
+    },
+  );
+
+  app.post(
+    "/organizations/accept-invitation",
+    describeRoute({
+      description: "Accepts an invitation with its one-time token and joins the organization",
+      responses: {
+        200: {
+          description: "Membership created",
+          content: { "application/json": { schema: resolver(MembershipResponse) } },
+        },
+        403: { description: "Organization is suspended", content: problem },
+        404: { description: "Invitation not found", content: problem },
+        ...sessionResponses(),
+      },
+    }),
+    sValidator("json", AcceptInvitationBody, validationErrorHandler),
+    async (c) => {
+      const user = c.get("user");
+      if (user === null) {
+        throw new HTTPException(401);
+      }
+      const { token } = c.req.valid("json");
+      try {
+        const membership = await acceptInvitation({ token, userId: user.id });
+        return c.json(toMembershipResponse(membership), 200);
+      } catch (error) {
+        throw toHttpException(error);
+      }
+    },
+  );
+
+  app.post(
+    "/organizations/:id/ownership",
+    describeRoute({
+      description: "Transfers ownership of the organization to another member",
+      responses: {
+        200: {
+          description: "Ownership transferred; previous owner demoted to admin",
+          content: {
+            "application/json": {
+              schema: resolver(
+                z.object({ previousOwner: MembershipResponse, newOwner: MembershipResponse }),
+              ),
+            },
+          },
+        },
+        ...tenantResponses(),
+      },
+    }),
+    tenantContext,
+    sValidator("json", TransferOwnershipBody, validationErrorHandler),
+    async (c) => {
+      const user = c.get("user");
+      if (user === null) {
+        throw new HTTPException(401);
+      }
+      const { newOwnerUserId } = c.req.valid("json");
+      try {
+        const { previousOwner, newOwner } = await transferOwnership({
+          actorUserId: user.id,
+          // The route pattern guarantees the :id segment; the middleware chain
+          // widens the path type so Hono's fallback overload returns string | undefined.
+          organizationId: c.req.param("id") as string,
+          newOwnerUserId,
+        });
+        return c.json(
+          {
+            previousOwner: toMembershipResponse(previousOwner),
+            newOwner: toMembershipResponse(newOwner),
+          },
+          200,
+        );
+      } catch (error) {
+        throw toHttpException(error);
+      }
+    },
+  );
+
+  app.post(
+    "/organizations/:id/suspend",
+    describeRoute({
+      description: "Suspends the organization; members lose access until it is reinstated",
+      responses: {
+        200: {
+          description: "Organization suspended",
+          content: { "application/json": { schema: resolver(OrganizationResponse) } },
+        },
+        ...tenantResponses(),
+      },
+    }),
+    tenantContext,
+    async (c) => {
+      const user = c.get("user");
+      if (user === null) {
+        throw new HTTPException(401);
+      }
+      try {
+        const organization = await suspendOrganization({
+          actorUserId: user.id,
+          // The route pattern guarantees the :id segment; the middleware chain
+          // widens the path type so Hono's fallback overload returns string | undefined.
+          organizationId: c.req.param("id") as string,
+        });
+        return c.json(toOrganizationResponse(organization), 200);
+      } catch (error) {
+        throw toHttpException(error);
+      }
+    },
+  );
+
+  return app;
+}

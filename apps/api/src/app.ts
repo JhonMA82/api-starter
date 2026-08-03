@@ -10,7 +10,7 @@ import { timeout } from "hono/timeout";
 import type { RoleResolver } from "./http/authorization";
 import { notFound, onError } from "./http/errors";
 import { jsonLogger } from "./http/logger";
-import { createRoutes } from "./routes";
+import { createRoutes, type OrganizationsHttpOptions } from "./routes";
 
 /**
  * Builds the API app with the exact middleware pipeline:
@@ -19,7 +19,11 @@ import { createRoutes } from "./routes";
  */
 export function createApp(
   config: Config,
-  options: { auth?: Auth; getRoles?: RoleResolver } = {},
+  options: {
+    auth?: Auth;
+    getRoles?: RoleResolver;
+    organizations?: OrganizationsHttpOptions;
+  } = {},
 ): Hono<{
   Variables: AuthVariables;
 }> {
@@ -46,7 +50,15 @@ export function createApp(
 
   app.on(["POST", "GET"], "/api/auth/*", (c) => auth.handler(c.req.raw));
 
-  app.route("/", createRoutes(config, { getRoles }));
+  app.route(
+    "/",
+    createRoutes(
+      config,
+      options.organizations === undefined
+        ? { getRoles }
+        : { getRoles, organizations: options.organizations },
+    ),
+  );
 
   app.notFound(notFound);
   app.onError(onError);
