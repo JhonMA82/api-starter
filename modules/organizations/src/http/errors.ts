@@ -5,7 +5,10 @@ import {
   ApiKeyNotFoundError,
   ForbiddenOrganizationActionError,
   InactiveMembershipError,
+  IncomingWebhookEventIdError,
   InvalidOrganizationRoleError,
+  InvalidWebhookProviderError,
+  InvalidWebhookSignatureError,
   InvitationAlreadyUsedError,
   InvitationEmailError,
   InvitationExpiredError,
@@ -17,6 +20,7 @@ import {
   OrganizationSlugError,
   OrganizationSuspendedError,
   OwnerConstraintError,
+  ProviderNotConfiguredError,
   WebhookEndpointNotFoundError,
   WebhookEventTypeError,
   WebhookNotActiveError,
@@ -38,6 +42,14 @@ export function toHttpException(error: unknown): unknown {
   }
   if (error instanceof ApiKeyNotFoundError || error instanceof WebhookEndpointNotFoundError) {
     return new HTTPException(404);
+  }
+  // Incoming webhook receivers: unknown/unconfigured providers answer 404 so
+  // the set of configured providers stays unobservable; bad signatures are 401.
+  if (error instanceof ProviderNotConfiguredError) {
+    return new HTTPException(404);
+  }
+  if (error instanceof InvalidWebhookSignatureError) {
+    return new HTTPException(401);
   }
   if (
     error instanceof OrganizationSuspendedError ||
@@ -61,7 +73,9 @@ export function toHttpException(error: unknown): unknown {
     error instanceof ApiKeyNameError ||
     error instanceof WebhookUrlError ||
     error instanceof WebhookEventTypeError ||
-    error instanceof WebhookNotActiveError
+    error instanceof WebhookNotActiveError ||
+    error instanceof InvalidWebhookProviderError ||
+    error instanceof IncomingWebhookEventIdError
   ) {
     return new HTTPException(400);
   }

@@ -137,3 +137,43 @@ export class WebhookNotActiveError extends Error {
     this.name = "WebhookNotActiveError";
   }
 }
+
+export class IncomingWebhookError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "IncomingWebhookError";
+  }
+}
+
+export class InvalidWebhookProviderError extends IncomingWebhookError {
+  constructor(provider: string) {
+    super(`Invalid webhook provider: ${provider}`);
+    this.name = "InvalidWebhookProviderError";
+  }
+}
+
+export class IncomingWebhookEventIdError extends IncomingWebhookError {
+  constructor(message: string) {
+    super(message);
+    this.name = "IncomingWebhookEventIdError";
+  }
+}
+
+/**
+ * The provider has no signing secret configured. The HTTP layer answers 404
+ * for these (and for unknown providers) so the outside world cannot probe
+ * which providers exist.
+ */
+export class ProviderNotConfiguredError extends IncomingWebhookError {
+  constructor(provider: string) {
+    super(`Webhook provider is not configured: ${provider}`);
+    this.name = "ProviderNotConfiguredError";
+  }
+}
+
+export class InvalidWebhookSignatureError extends IncomingWebhookError {
+  constructor() {
+    super("webhook signature verification failed");
+    this.name = "InvalidWebhookSignatureError";
+  }
+}

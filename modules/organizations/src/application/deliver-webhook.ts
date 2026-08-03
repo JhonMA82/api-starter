@@ -1,5 +1,3 @@
-import { createHmac } from "node:crypto";
-
 import type { DomainEvent } from "../domain/domain-events";
 import { WebhookNotActiveError } from "../domain/organization.errors";
 import {
@@ -8,6 +6,7 @@ import {
   type WebhookEndpoint,
 } from "../domain/webhook.entity";
 import type { WebhookRepository } from "./ports";
+import { signWebhookPayload } from "./webhook-signature";
 
 export interface WebhookDeliverInput {
   url: string;
@@ -52,11 +51,9 @@ export function buildWebhookHeaders(input: {
   event: DomainEvent;
 }): Record<string, string> {
   const body = JSON.stringify(input.payload);
-  const signature = createHmac("sha256", input.secret)
-    .update(`${input.timestamp}.${body}`)
-    .digest("hex");
+  const signature = signWebhookPayload(input.secret, String(input.timestamp), body);
   return {
-    "x-webhook-signature": `sha256=${signature}`,
+    "x-webhook-signature": signature,
     "x-webhook-timestamp": String(input.timestamp),
     "x-webhook-event-id": input.event.id,
     "x-webhook-event-type": input.event.type,

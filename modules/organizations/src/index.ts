@@ -1,3 +1,4 @@
+export type { JobQueue } from "@consulting/module-jobs";
 export type {
   AcceptInvitationInput,
   AcceptInvitationResult,
@@ -62,6 +63,7 @@ export type {
   ApiKeyRepository,
   CreateInvitationInput,
   CreateMembershipInput,
+  IncomingWebhookRepository,
   InvitationRepository,
   MembershipRepository,
   OrganizationRepository,
@@ -69,6 +71,16 @@ export type {
   UnitOfWork,
   WebhookRepository,
 } from "./application/ports";
+export type { IncomingWebhookProcessorDeps } from "./application/process-incoming-webhook";
+export { createIncomingWebhookProcessor } from "./application/process-incoming-webhook";
+export type {
+  ReceiveIncomingWebhookDeps,
+  ReceiveIncomingWebhookInput,
+  ReceiveIncomingWebhookResult,
+  ReceiveIncomingWebhookUseCase,
+  WebhookProviderSecrets,
+} from "./application/receive-incoming-webhook";
+export { createReceiveIncomingWebhookUseCase } from "./application/receive-incoming-webhook";
 export type {
   RegisterWebhookDeps,
   RegisterWebhookInput,
@@ -129,11 +141,27 @@ export type {
 export { verifyApiKeyUseCase } from "./application/verify-api-key";
 export type { WebhookOutboxHandlerDeps } from "./application/webhook-outbox-handler";
 export { createWebhookOutboxHandler } from "./application/webhook-outbox-handler";
+export {
+  isWebhookTimestampFresh,
+  signWebhookPayload,
+  verifyWebhookSignature,
+  WEBHOOK_EVENT_ID_HEADER,
+  WEBHOOK_MAX_CLOCK_SKEW_SECONDS,
+  WEBHOOK_SIGNATURE_HEADER,
+  WEBHOOK_TIMESTAMP_HEADER,
+} from "./application/webhook-signature";
 export { createWebhookSecret } from "./application/webhook-token";
 export type { ApiKey } from "./domain/api-key.entity";
 export { assertValidApiKeyName, isApiKeyActive } from "./domain/api-key.entity";
 export type { DomainEvent, DomainEventBase, DomainEventType } from "./domain/domain-events";
 export { createDomainEvent } from "./domain/domain-events";
+export type { IncomingWebhook, IncomingWebhookStatus } from "./domain/incoming-webhook.entity";
+export {
+  assertValidEventId,
+  assertValidProvider,
+  parseIncomingWebhookPayload,
+  RAW_PAYLOAD_RETENTION_LIMIT,
+} from "./domain/incoming-webhook.entity";
 export type { Invitation } from "./domain/invitation.entity";
 export {
   assertInvitationUsable,
@@ -152,7 +180,11 @@ export {
   ApiKeyNotFoundError,
   ForbiddenOrganizationActionError,
   InactiveMembershipError,
+  IncomingWebhookError,
+  IncomingWebhookEventIdError,
   InvalidOrganizationRoleError,
+  InvalidWebhookProviderError,
+  InvalidWebhookSignatureError,
   InvitationAlreadyUsedError,
   InvitationEmailError,
   InvitationExpiredError,
@@ -164,6 +196,7 @@ export {
   OrganizationSlugError,
   OrganizationSuspendedError,
   OwnerConstraintError,
+  ProviderNotConfiguredError,
   WebhookEndpointNotFoundError,
   WebhookEventTypeError,
   WebhookNotActiveError,
@@ -197,6 +230,10 @@ export {
   SESSION_COOKIE_NAME,
 } from "./http/api-key-middleware";
 export {
+  createIncomingWebhookRoutes,
+  type IncomingWebhookRoutesDeps,
+} from "./http/incoming-webhook.routes";
+export {
   createOrganizationRoutes,
   type OrganizationRoutesDeps,
 } from "./http/organization.routes";
@@ -210,15 +247,18 @@ export {
   createApiKeyRepository,
   createClient,
   createDb,
+  createIncomingWebhookRepository,
   createInvitationRepository,
   createMembershipRepository,
   createOrganizationRepository,
   createOutboxRepository,
+  createStaticWebhookSecrets,
   createUnitOfWork,
   createWebhookRepository,
   defaultWebhookDeliver,
 } from "./infrastructure";
 export { apiKeySchema } from "./infrastructure/api-key.schema";
+export { incomingWebhookSchema } from "./infrastructure/incoming-webhook.schema";
 export { organizationSchema } from "./infrastructure/organization.schema";
 export { outboxSchema } from "./infrastructure/outbox.schema";
 export { webhookSchema } from "./infrastructure/webhook.schema";

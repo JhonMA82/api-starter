@@ -35,6 +35,7 @@ const PUBLIC_TABLES = [
   "account",
   "api_keys",
   "audit_log",
+  "incoming_webhooks",
   "invitations",
   "jobs",
   "memberships",
@@ -219,6 +220,52 @@ async function expectWebhookSchema(client: Sql): Promise<void> {
   ]);
 }
 
+async function expectIncomingWebhookSchema(client: Sql): Promise<void> {
+  type Column = { table_name: string; column_name: string };
+  const columns = (await client.unsafe<Column[]>(`
+    SELECT table_name, column_name
+    FROM information_schema.columns
+    WHERE table_schema = 'public' AND table_name = 'incoming_webhooks'
+    ORDER BY table_name, ordinal_position
+  `)) as unknown as Column[];
+  expect(columns).toEqual([
+    { table_name: "incoming_webhooks", column_name: "id" },
+    { table_name: "incoming_webhooks", column_name: "provider" },
+    { table_name: "incoming_webhooks", column_name: "event_id" },
+    { table_name: "incoming_webhooks", column_name: "payload" },
+    { table_name: "incoming_webhooks", column_name: "signature_valid" },
+    { table_name: "incoming_webhooks", column_name: "status" },
+    { table_name: "incoming_webhooks", column_name: "received_at" },
+    { table_name: "incoming_webhooks", column_name: "processed_at" },
+    { table_name: "incoming_webhooks", column_name: "created_at" },
+  ]);
+
+  const indexes = await client.unsafe<{ indexname: string }[]>(`
+    SELECT indexname
+    FROM pg_indexes
+    WHERE schemaname = 'public'
+      AND indexname IN (
+        'incoming_webhooks_provider_idx',
+        'incoming_webhooks_status_idx'
+      )
+    ORDER BY indexname
+  `);
+  expect(indexes.map((row) => row.indexname)).toEqual([
+    "incoming_webhooks_provider_idx",
+    "incoming_webhooks_status_idx",
+  ]);
+
+  type Constraint = { conname: string; contype: string };
+  const constraints = (await client.unsafe<Constraint[]>(`
+    SELECT conname, contype
+    FROM pg_constraint
+    WHERE conname = 'incoming_webhooks_provider_event_unique'
+  `)) as unknown as Constraint[];
+  expect(constraints).toEqual([
+    { conname: "incoming_webhooks_provider_event_unique", contype: "u" },
+  ]);
+}
+
 async function expectBookkeeping(client: Sql, count: string): Promise<void> {
   const tables = await client.unsafe<{ table_name: string }[]>(`
     SELECT table_name
@@ -245,7 +292,7 @@ describeDb("organizations migrations (real database)", () => {
     await closeClient(client);
   });
 
-  test("from zero creates 14 public tables and Drizzle bookkeeping", async () => {
+  test("from zero creates 15 public tables and Drizzle bookkeeping", async () => {
     await resetDatabase(client);
     await migrateToLatest(client);
 
@@ -258,7 +305,8 @@ describeDb("organizations migrations (real database)", () => {
     expect(publicTables.map((row) => row.table_name)).toEqual(PUBLIC_TABLES);
     await expectOrganizationSchema(client);
     await expectWebhookSchema(client);
-    await expectBookkeeping(client, "9");
+    await expectIncomingWebhookSchema(client);
+    await expectBookkeeping(client, "10");
   });
 
   test("0003-only database upgrades to the full organizational schema", async () => {
@@ -300,7 +348,8 @@ describeDb("organizations migrations (real database)", () => {
 
       await expectOrganizationSchema(client);
       await expectWebhookSchema(client);
-      await expectBookkeeping(client, "9");
+      await expectIncomingWebhookSchema(client);
+      await expectBookkeeping(client, "10");
     } finally {
       rmSync(tempDir, { recursive: true, force: true });
     }
@@ -313,7 +362,8 @@ describeDb("organizations migrations (real database)", () => {
 
     await expectOrganizationSchema(client);
     await expectWebhookSchema(client);
-    await expectBookkeeping(client, "9");
+    await expectIncomingWebhookSchema(client);
+    await expectBookkeeping(client, "10");
   });
 
   test("memberships FK to auth user and cascade on organization delete", async () => {

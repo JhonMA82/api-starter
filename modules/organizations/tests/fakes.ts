@@ -5,6 +5,7 @@ import type {
   CreateInvitationInput,
   CreateMembershipInput,
   CreateOrganizationInput,
+  IncomingWebhookRepository,
   InvitationRepository,
   MembershipRepository,
   OrganizationRepository,
@@ -14,6 +15,7 @@ import type {
 } from "../src/application/ports";
 import type { ApiKey } from "../src/domain/api-key.entity";
 import type { DomainEvent, DomainEventType } from "../src/domain/domain-events";
+import type { IncomingWebhook } from "../src/domain/incoming-webhook.entity";
 import type { Invitation } from "../src/domain/invitation.entity";
 import type { Membership } from "../src/domain/membership.entity";
 import type { Organization, OrganizationStatus } from "../src/domain/organization.entity";
@@ -114,6 +116,7 @@ export interface FakeRepositories {
   apiKeys: ApiKeyRepository;
   webhooks: WebhookRepository;
   outbox: OutboxRepository;
+  incomingWebhooks: IncomingWebhookRepository;
   organizationStore: Map<string, Organization>;
   membershipStore: Map<string, Membership>;
   invitationStore: Map<string, Invitation>;
@@ -121,6 +124,7 @@ export interface FakeRepositories {
   webhookEndpointStore: Map<string, WebhookEndpoint>;
   webhookDeliveryStore: Map<string, WebhookDelivery>;
   outboxStore: OutboxRecord[];
+  incomingWebhookStore: Map<string, IncomingWebhook>;
 }
 
 export function createFakeApiKeyRepository(apiKeyStore = new Map<string, ApiKey>()): {
@@ -309,6 +313,81 @@ export function createFakeWebhookRepository(
   return { webhooks, webhookEndpointStore, webhookDeliveryStore };
 }
 
+export function createFakeIncomingWebhookRepository(
+  incomingWebhookStore = new Map<string, IncomingWebhook>(),
+): {
+  incomingWebhooks: IncomingWebhookRepository;
+  incomingWebhookStore: Map<string, IncomingWebhook>;
+} {
+  const find = (provider: string, eventId: string): IncomingWebhook | null =>
+    [...incomingWebhookStore.values()].find(
+      (webhook) => webhook.provider === provider && webhook.eventId === eventId,
+    ) ?? null;
+
+  const incomingWebhooks: IncomingWebhookRepository = {
+    async createIfAbsent(input) {
+      const existing = find(input.provider, input.eventId);
+      if (existing !== null) {
+        return { created: false, webhook: existing };
+      }
+      const webhook: IncomingWebhook = {
+        id: `incoming-${incomingWebhookStore.size + 1}`,
+        provider: input.provider,
+        eventId: input.eventId,
+        payload: input.payload,
+        signatureValid: input.signatureValid,
+        status: "received",
+        receivedAt: NOW,
+        processedAt: null,
+        createdAt: NOW,
+      };
+      incomingWebhookStore.set(webhook.id, webhook);
+      return { created: true, webhook };
+    },
+    async findByProviderAndEventId(provider, eventId) {
+      return find(provider, eventId);
+    },
+    async findById(id) {
+      return incomingWebhookStore.get(id) ?? null;
+    },
+    async markProcessing(id) {
+      const webhook = incomingWebhookStore.get(id);
+      if (webhook !== undefined) {
+        incomingWebhookStore.set(id, { ...webhook, status: "processing" });
+      }
+    },
+    async markProcessed(id) {
+      const webhook = incomingWebhookStore.get(id);
+      if (webhook !== undefined) {
+        incomingWebhookStore.set(id, { ...webhook, status: "processed", processedAt: NOW });
+      }
+    },
+    async markFailed(id) {
+      const webhook = incomingWebhookStore.get(id);
+      if (webhook !== undefined) {
+        incomingWebhookStore.set(id, { ...webhook, status: "failed", processedAt: NOW });
+      }
+    },
+  };
+
+  return { incomingWebhooks, incomingWebhookStore };
+}
+
+export function makeIncomingWebhook(overrides: Partial<IncomingWebhook> = {}): IncomingWebhook {
+  return {
+    id: "incoming-1",
+    provider: "stripe",
+    eventId: "evt_1",
+    payload: { eventId: "evt_1", data: { amount: 100 } },
+    signatureValid: true,
+    status: "received",
+    receivedAt: NOW,
+    processedAt: null,
+    createdAt: NOW,
+    ...overrides,
+  };
+}
+
 export function createFakeOutboxRepository(): {
   outbox: OutboxRepository;
   outboxStore: OutboxRecord[];
@@ -413,6 +492,7 @@ export function createFakeRepositories(): FakeRepositories {
   const apiKeyStore = new Map<string, ApiKey>();
   const webhookEndpointStore = new Map<string, WebhookEndpoint>();
   const webhookDeliveryStore = new Map<string, WebhookDelivery>();
+  const incomingWebhookStore = new Map<string, IncomingWebhook>();
 
   const organizations: OrganizationRepository = {
     async findById(id: string) {
@@ -607,6 +687,7 @@ export function createFakeRepositories(): FakeRepositories {
     apiKeyStore,
     ...createFakeWebhookRepository(webhookEndpointStore, webhookDeliveryStore),
     ...createFakeOutboxRepository(),
+    ...createFakeIncomingWebhookRepository(incomingWebhookStore),
   };
 }
 
@@ -674,6 +755,7 @@ export function createFakeUnitOfWork(repos: FakeRepositories): {
         return repos.outbox.append(event);
       },
     },
+    incomingWebhooks: repos.incomingWebhooks,
   };
   return { uow, calls };
 }

@@ -8,15 +8,20 @@ import {
   VersionResponse,
 } from "@consulting/contracts";
 import { exampleRoutes } from "@consulting/module-example";
+import type { JobQueue } from "@consulting/module-organizations";
 import {
   type ApiKeyRepository,
+  createIncomingWebhookRoutes,
   createOrganizationAudit,
   createOrganizationRoutes,
+  createReceiveIncomingWebhookUseCase,
   createTenancyService,
+  type IncomingWebhookRepository,
   type InvitationRepository,
   type MembershipRepository,
   type OrganizationRepository,
   type UnitOfWork,
+  type WebhookProviderSecrets,
   type WebhookRepository,
 } from "@consulting/module-organizations";
 import { apiReference } from "@scalar/hono-api-reference";
@@ -54,6 +59,15 @@ export interface OrganizationsHttpOptions {
     uow: UnitOfWork | null;
   };
   audit?: AuditLogger;
+  /**
+   * Incoming webhook receiver wiring (spec §14.6). When absent the
+   * /api/v1/webhooks/incoming/* routes are NOT mounted (hermetic default).
+   */
+  incomingWebhooks?: {
+    repository: IncomingWebhookRepository;
+    secrets: WebhookProviderSecrets;
+    queue: JobQueue | null;
+  };
 }
 
 export function createRoutes(
@@ -128,6 +142,22 @@ export function createRoutes(
           : createOrganizationAudit(options.organizations.audit),
     });
     app.route("/api/v1", organizationsRoutes);
+  }
+
+  // Incoming webhooks mount OUTSIDE the tenant/session middleware chain:
+  // public by design — the HMAC signature is the authentication.
+  if (options.organizations?.incomingWebhooks !== undefined) {
+    const incomingWebhookRoutes = createIncomingWebhookRoutes({
+      receive: createReceiveIncomingWebhookUseCase({
+        incomingWebhooks: options.organizations.incomingWebhooks.repository,
+        secrets: options.organizations.incomingWebhooks.secrets,
+        queue: options.organizations.incomingWebhooks.queue,
+        ...(options.organizations.audit === undefined
+          ? {}
+          : { audit: options.organizations.audit }),
+      }),
+    });
+    app.route("/api/v1", incomingWebhookRoutes);
   }
 
   app.get(

@@ -1,5 +1,6 @@
 import type { ApiKey } from "../domain/api-key.entity";
 import type { DomainEvent, DomainEventType } from "../domain/domain-events";
+import type { IncomingWebhook } from "../domain/incoming-webhook.entity";
 import type { Invitation } from "../domain/invitation.entity";
 import type { Membership, MembershipStatus } from "../domain/membership.entity";
 import type { Organization, OrganizationStatus } from "../domain/organization.entity";
@@ -133,6 +134,25 @@ export interface WebhookRepository {
   ): Promise<WebhookDelivery>;
 }
 
+export interface IncomingWebhookRepository {
+  /**
+   * INSERT ... ON CONFLICT (provider, event_id) DO NOTHING. `created` is true
+   * when the row was inserted now; false means a duplicate delivery for the
+   * same provider+event id (idempotency) — the existing row is returned.
+   */
+  createIfAbsent(input: {
+    provider: string;
+    eventId: string;
+    payload: Record<string, unknown>;
+    signatureValid: boolean;
+  }): Promise<{ created: boolean; webhook: IncomingWebhook }>;
+  findByProviderAndEventId(provider: string, eventId: string): Promise<IncomingWebhook | null>;
+  findById(id: string): Promise<IncomingWebhook | null>;
+  markProcessing(id: string): Promise<void>;
+  markProcessed(id: string): Promise<void>;
+  markFailed(id: string): Promise<void>;
+}
+
 export interface UnitOfWork {
   run<T>(work: (uow: UnitOfWork) => Promise<T>): Promise<T>;
   readonly organizations: OrganizationRepository;
@@ -141,4 +161,5 @@ export interface UnitOfWork {
   readonly apiKeys: ApiKeyRepository;
   readonly webhooks: WebhookRepository;
   readonly outbox: OutboxRepository;
+  readonly incomingWebhooks: IncomingWebhookRepository;
 }

@@ -1,11 +1,14 @@
 export { createApiKeyRepository } from "./api-key.repository";
 export { createClient, createDb } from "./db";
 export { defaultWebhookDeliver } from "./default-webhook-deliver";
+export { createIncomingWebhookRepository } from "./incoming-webhook.repository";
+export { incomingWebhookSchema } from "./incoming-webhook.schema";
 export { createInvitationRepository } from "./invitation.repository";
 export { createMembershipRepository } from "./membership.repository";
 export { createOrganizationRepository } from "./organization.repository";
 export { createOutboxRepository } from "./outbox.repository";
 export { outboxSchema } from "./outbox.schema";
+export { createStaticWebhookSecrets } from "./static-webhook-secrets";
 export { createUnitOfWork } from "./unit-of-work";
 export { createWebhookRepository } from "./webhook.repository";
 export { webhookSchema } from "./webhook.schema";

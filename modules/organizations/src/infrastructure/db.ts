@@ -8,6 +8,7 @@ import {
 import postgres, { type Sql } from "postgres";
 
 import { apiKeys } from "./api-key.schema";
+import { incomingWebhooks } from "./incoming-webhook.schema";
 import { invitations, memberships, organizations } from "./organization.schema";
 import { outboxEvents } from "./outbox.schema";
 import { webhookDeliveries, webhookEndpoints } from "./webhook.schema";
@@ -20,6 +21,7 @@ export const schema = {
   outboxEvents,
   webhookEndpoints,
   webhookDeliveries,
+  incomingWebhooks,
 };
 export type Db = PostgresJsDatabase<typeof schema>;
 export type DbTransaction = PgTransaction<
