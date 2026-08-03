@@ -104,7 +104,7 @@ describeDb("audit migrations (real database)", () => {
     await closeClient(client);
   });
 
-  test("from zero creates 6 public tables and Drizzle bookkeeping", async () => {
+  test("from zero creates 9 public tables and Drizzle bookkeeping", async () => {
     await resetDatabase(client);
     await migrateToLatest(client);
 
@@ -117,13 +117,16 @@ describeDb("audit migrations (real database)", () => {
     expect(publicTables.map((row) => row.table_name)).toEqual([
       "account",
       "audit_log",
+      "invitations",
+      "memberships",
       "notes",
+      "organizations",
       "session",
       "user",
       "verification",
     ]);
     await expectAuditSchema(client);
-    await expectBookkeeping(client, "4");
+    await expectBookkeeping(client, "5");
   });
 
   test("0002-only database upgrades to the full schema", async () => {
@@ -163,7 +166,7 @@ describeDb("audit migrations (real database)", () => {
       await migrateToLatest(client);
 
       await expectAuditSchema(client);
-      await expectBookkeeping(client, "4");
+      await expectBookkeeping(client, "5");
     } finally {
       rmSync(tempDir, { recursive: true, force: true });
     }
@@ -175,6 +178,6 @@ describeDb("audit migrations (real database)", () => {
     await migrateToLatest(client);
 
     await expectAuditSchema(client);
-    await expectBookkeeping(client, "4");
+    await expectBookkeeping(client, "5");
   });
 });

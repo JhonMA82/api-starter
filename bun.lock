@@ -56,6 +56,14 @@
         "postgres": "3.4.9",
       },
     },
+    "modules/organizations": {
+      "name": "@consulting/module-organizations",
+      "version": "0.1.0",
+      "dependencies": {
+        "drizzle-orm": "0.45.2",
+        "postgres": "3.4.9",
+      },
+    },
     "packages/audit": {
       "name": "@consulting/audit",
       "version": "0.1.0",
@@ -162,6 +170,8 @@
     "@consulting/module-example": ["@consulting/module-example@workspace:modules/example"],
 
     "@consulting/module-notes": ["@consulting/module-notes@workspace:modules/notes"],
+
+    "@consulting/module-organizations": ["@consulting/module-organizations@workspace:modules/organizations"],
 
     "@drizzle-team/brocli": ["@drizzle-team/brocli@0.10.2", "", {}, "sha512-z33Il7l5dKjUgGULTqBsQBQwckHh5AbIuxhdsIxDDiZAzBOrZO6q9ogcWC65kU382AfynTfgNumVcNIjuIua6w=="],
 

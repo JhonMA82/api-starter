@@ -6,6 +6,7 @@ export default defineConfig({
     "./modules/notes/src/infrastructure/note.schema.ts",
     "./packages/auth/src/auth.schema.ts",
     "./packages/audit/src/audit.schema.ts",
+    "./modules/organizations/src/infrastructure/organization.schema.ts",
   ],
   out: "./migrations",
   strict: true,
