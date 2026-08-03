@@ -26,6 +26,12 @@ export { inviteMemberUseCase } from "./application/invite-member";
 export type { OrganizationAudit } from "./application/organization-audit";
 export { createOrganizationAudit } from "./application/organization-audit";
 export type {
+  OutboxHandler,
+  OutboxPollResult,
+  OutboxWorkerDeps,
+} from "./application/outbox-worker";
+export { createOutboxWorker } from "./application/outbox-worker";
+export type {
   CreateInvitationInput,
   CreateMembershipInput,
   InvitationRepository,
@@ -106,6 +112,7 @@ export type {
   OutboxStatus,
 } from "./domain/outbox.entity";
 export { isOutboxRetryable } from "./domain/outbox.entity";
+export { OutboxEventNotFoundError } from "./domain/outbox.errors";
 export type { TenantContext } from "./domain/tenant-context";
 export { createTenantContext } from "./domain/tenant-context";
 export {

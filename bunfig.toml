@@ -11,6 +11,7 @@ coverageReporter = ["text", "lcov"]
 coveragePathIgnorePatterns = [
   "**/modules/notes/src/infrastructure/**",
   "**/modules/organizations/src/infrastructure/**",
+  "**/modules/jobs/src/infrastructure/**",
   "**/modules/notes/tests/db-test-utils.ts",
   "**/modules/organizations/tests/fakes.ts",
   "**/packages/auth/src/**",

@@ -8,6 +8,7 @@ export default defineConfig({
     "./packages/audit/src/audit.schema.ts",
     "./modules/organizations/src/infrastructure/organization.schema.ts",
     "./modules/organizations/src/infrastructure/outbox.schema.ts",
+    "./modules/jobs/src/infrastructure/job.schema.ts",
   ],
   out: "./migrations",
   strict: true,

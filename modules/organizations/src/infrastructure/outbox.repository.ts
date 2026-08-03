@@ -3,6 +3,7 @@ import { and, asc, eq, lte, sql } from "drizzle-orm";
 import type { OutboxRepository } from "../application/ports";
 import type { DomainEvent } from "../domain/domain-events";
 import type { OutboxRecord, OutboxStatus } from "../domain/outbox.entity";
+import { OutboxEventNotFoundError } from "../domain/outbox.errors";
 import type { DbOrTransaction } from "./db";
 import { outboxEvents } from "./outbox.schema";
 
@@ -29,6 +30,10 @@ export function createOutboxRepository(db: DbOrTransaction): OutboxRepository {
         .limit(limit);
       return rows.map(rowToOutboxRecord);
     },
+    async findByEventId(eventId: string) {
+      const [row] = await db.select().from(outboxEvents).where(eq(outboxEvents.eventId, eventId));
+      return row === undefined ? null : rowToOutboxRecord(row);
+    },
     async markProcessing(id: string) {
       await db
         .update(outboxEvents)
@@ -41,13 +46,14 @@ export function createOutboxRepository(db: DbOrTransaction): OutboxRepository {
         .set({ status: "succeeded", processedAt: new Date(), updatedAt: new Date() })
         .where(eq(outboxEvents.id, id));
     },
-    async markFailed(id: string, error: string) {
+    async markFailed(id: string, error: string, nextAttemptAt?: Date) {
       await db
         .update(outboxEvents)
         .set({
           attempts: sql`${outboxEvents.attempts} + 1`,
           lastError: error,
           status: sql`case when ${outboxEvents.attempts} + 1 >= ${outboxEvents.maxAttempts} then 'dead_letter' else 'failed' end`,
+          nextAttemptAt: nextAttemptAt ?? new Date(),
           updatedAt: new Date(),
         })
         .where(eq(outboxEvents.id, id));
@@ -62,7 +68,7 @@ export function createOutboxRepository(db: DbOrTransaction): OutboxRepository {
       return rows.map(rowToOutboxRecord);
     },
     async reprocess(id: string) {
-      await db
+      const [row] = await db
         .update(outboxEvents)
         .set({
           status: "pending",
@@ -72,7 +78,19 @@ export function createOutboxRepository(db: DbOrTransaction): OutboxRepository {
           nextAttemptAt: new Date(),
           updatedAt: new Date(),
         })
-        .where(eq(outboxEvents.id, id));
+        .where(eq(outboxEvents.id, id))
+        .returning();
+      if (row === undefined) {
+        throw new OutboxEventNotFoundError(id);
+      }
+      return rowToOutboxRecord(row);
+    },
+    async pendingCount() {
+      const [row] = await db
+        .select({ count: sql<number>`count(*)::int` })
+        .from(outboxEvents)
+        .where(eq(outboxEvents.status, "pending"));
+      return row?.count ?? 0;
     },
   };
 }

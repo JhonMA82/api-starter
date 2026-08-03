@@ -50,6 +50,14 @@
         "zod": "4.4.3",
       },
     },
+    "modules/jobs": {
+      "name": "@consulting/module-jobs",
+      "version": "0.1.0",
+      "dependencies": {
+        "drizzle-orm": "0.45.2",
+        "postgres": "3.4.9",
+      },
+    },
     "modules/notes": {
       "name": "@consulting/module-notes",
       "version": "0.1.0",
@@ -177,6 +185,8 @@
     "@consulting/core": ["@consulting/core@workspace:packages/core"],
 
     "@consulting/module-example": ["@consulting/module-example@workspace:modules/example"],
+
+    "@consulting/module-jobs": ["@consulting/module-jobs@workspace:modules/jobs"],
 
     "@consulting/module-notes": ["@consulting/module-notes@workspace:modules/notes"],
 

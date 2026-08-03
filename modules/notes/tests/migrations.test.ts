@@ -68,7 +68,7 @@ describeDb("migrations (real database)", () => {
     const bookkeeping = await client.unsafe<{ count: string }[]>(
       `SELECT count(*)::text AS count FROM drizzle.__drizzle_migrations`,
     );
-    expect(bookkeeping[0]?.count).toBe("6");
+    expect(bookkeeping[0]?.count).toBe("7");
   });
 
   test("upgrade: v1-only database keeps rows when v2 migration applies", async () => {
@@ -111,7 +111,7 @@ describeDb("migrations (real database)", () => {
       const bookkeeping = await client.unsafe<{ count: string }[]>(
         `SELECT count(*)::text AS count FROM drizzle.__drizzle_migrations`,
       );
-      expect(bookkeeping[0]?.count).toBe("6");
+      expect(bookkeeping[0]?.count).toBe("7");
     } finally {
       rmSync(tempDir, { recursive: true, force: true });
     }
@@ -125,6 +125,6 @@ describeDb("migrations (real database)", () => {
     const bookkeeping = await client.unsafe<{ count: string }[]>(
       `SELECT count(*)::text AS count FROM drizzle.__drizzle_migrations`,
     );
-    expect(bookkeeping[0]?.count).toBe("6");
+    expect(bookkeeping[0]?.count).toBe("7");
   });
 });

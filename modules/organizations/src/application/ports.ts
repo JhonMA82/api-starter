@@ -67,11 +67,13 @@ export interface InvitationRepository {
 export interface OutboxRepository {
   append(event: DomainEvent): Promise<void>;
   findPendingDue(limit: number): Promise<OutboxRecord[]>;
+  findByEventId(eventId: string): Promise<OutboxRecord | null>;
   markProcessing(id: string): Promise<void>;
   markSucceeded(id: string): Promise<void>;
-  markFailed(id: string, error: string): Promise<void>;
+  markFailed(id: string, error: string, nextAttemptAt?: Date): Promise<void>;
   listByStatus(status: string, limit: number): Promise<OutboxRecord[]>;
-  reprocess(id: string): Promise<void>;
+  reprocess(id: string): Promise<OutboxRecord>;
+  pendingCount(): Promise<number>;
 }
 
 export interface UnitOfWork {

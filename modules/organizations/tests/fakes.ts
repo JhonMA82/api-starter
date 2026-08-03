@@ -20,6 +20,7 @@ import {
 } from "../src/domain/organization.errors";
 import type { OrganizationRole } from "../src/domain/organization-roles";
 import type { OutboxRecord } from "../src/domain/outbox.entity";
+import { OutboxEventNotFoundError } from "../src/domain/outbox.errors";
 
 export const NOW = new Date("2026-08-03T12:00:00.000Z");
 
@@ -100,6 +101,9 @@ export function createFakeOutboxRepository(): {
         .sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime())
         .slice(0, limit);
     },
+    async findByEventId(eventId: string) {
+      return outboxStore.find((r) => r.eventId === eventId) ?? null;
+    },
     async markProcessing(id: string) {
       const record = outboxStore.find((r) => r.id === id);
       if (record !== undefined) {
@@ -115,7 +119,7 @@ export function createFakeOutboxRepository(): {
         record.updatedAt = new Date();
       }
     },
-    async markFailed(id: string, error: string) {
+    async markFailed(id: string, error: string, nextAttemptAt?: Date) {
       const record = outboxStore.find((r) => r.id === id);
       if (record === undefined) {
         return;
@@ -123,6 +127,7 @@ export function createFakeOutboxRepository(): {
       record.attempts += 1;
       record.lastError = error;
       record.status = record.attempts >= record.maxAttempts ? "dead_letter" : "failed";
+      record.nextAttemptAt = nextAttemptAt ?? new Date();
       record.updatedAt = new Date();
     },
     async listByStatus(status: string, limit: number) {
@@ -134,7 +139,7 @@ export function createFakeOutboxRepository(): {
     async reprocess(id: string) {
       const record = outboxStore.find((r) => r.id === id);
       if (record === undefined) {
-        return;
+        throw new OutboxEventNotFoundError(id);
       }
       record.status = "pending";
       record.attempts = 0;
@@ -142,6 +147,10 @@ export function createFakeOutboxRepository(): {
       record.nextAttemptAt = new Date();
       record.processedAt = null;
       record.updatedAt = new Date();
+      return record;
+    },
+    async pendingCount() {
+      return outboxStore.filter((record) => record.status === "pending").length;
     },
   };
 
