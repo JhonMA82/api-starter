@@ -119,4 +119,4 @@ jobs:
         with:
           bun-version-file: .bun-version
       - run: bun install --frozen-lockfile
-      - run: bun test modules/notes/tests/migrations.test.ts
+       - run: bun test modules/notes/tests/migrations.test.ts packages/auth/tests/auth-migrations.test.ts
