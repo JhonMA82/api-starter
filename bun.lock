@@ -19,6 +19,7 @@
       "name": "@consulting/api",
       "version": "0.1.0",
       "dependencies": {
+        "@consulting/auth": "workspace:*",
         "@consulting/config": "workspace:*",
         "@consulting/contracts": "workspace:*",
         "@consulting/core": "workspace:*",
@@ -63,6 +64,13 @@
         "drizzle-orm": "0.45.2",
         "hono": "4.12.33",
         "postgres": "3.4.9",
+      },
+    },
+    "packages/auth-client": {
+      "name": "@consulting/auth-client",
+      "version": "0.1.0",
+      "dependencies": {
+        "better-auth": "1.6.25",
       },
     },
     "packages/config": {
@@ -125,6 +133,8 @@
     "@consulting/api": ["@consulting/api@workspace:apps/api"],
 
     "@consulting/auth": ["@consulting/auth@workspace:packages/auth"],
+
+    "@consulting/auth-client": ["@consulting/auth-client@workspace:packages/auth-client"],
 
     "@consulting/config": ["@consulting/config@workspace:packages/config"],
 

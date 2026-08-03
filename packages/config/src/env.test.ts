@@ -11,6 +11,8 @@ const validEnv = {
   HOST: "0.0.0.0",
   CORS_ORIGINS: "",
   DATABASE_URL: "postgres://postgres:postgres@localhost:5432/api",
+  BETTER_AUTH_SECRET: "test-secret-at-least-32-characters-long",
+  TRUSTED_ORIGINS: "",
 };
 
 describe("parseEnv", () => {
@@ -25,7 +27,20 @@ describe("parseEnv", () => {
       HOST: "0.0.0.0",
       CORS_ORIGINS: [],
       DATABASE_URL: "postgres://postgres:postgres@localhost:5432/api",
+      BETTER_AUTH_SECRET: "test-secret-at-least-32-characters-long",
+      TRUSTED_ORIGINS: [],
     });
+  });
+
+  test("missing BETTER_AUTH_SECRET aborts naming the variable", () => {
+    const { BETTER_AUTH_SECRET: _secret, ...withoutSecret } = validEnv;
+    expect(() => parseEnv(withoutSecret)).toThrow(/BETTER_AUTH_SECRET/);
+  });
+
+  test("short BETTER_AUTH_SECRET is rejected", () => {
+    expect(() => parseEnv({ ...validEnv, BETTER_AUTH_SECRET: "a".repeat(31) })).toThrow(
+      /BETTER_AUTH_SECRET/,
+    );
   });
 
   test("missing DATABASE_URL aborts naming the variable", () => {
@@ -46,6 +61,7 @@ describe("parseEnv", () => {
       expect(error).toBeInstanceOf(ConfigError);
       const message = (error as ConfigError).message;
       expect(message).toMatch(/^Invalid environment configuration:\n {2}- LOG_LEVEL:/);
+      expect(message).toContain("  - BETTER_AUTH_SECRET:");
     }
   });
 
@@ -61,6 +77,20 @@ describe("parseEnv", () => {
       CORS_ORIGINS: "https://a.example.com, https://b.example.com, ,",
     });
     expect(config.CORS_ORIGINS).toEqual(["https://a.example.com", "https://b.example.com"]);
+  });
+
+  test("TRUSTED_ORIGINS splits, trims, and drops empty entries", () => {
+    const config = parseEnv({
+      ...validEnv,
+      TRUSTED_ORIGINS: "https://a.example.com, https://b.example.com, ,",
+    });
+    expect(config.TRUSTED_ORIGINS).toEqual(["https://a.example.com", "https://b.example.com"]);
+  });
+
+  test("invalid BETTER_AUTH_URL is rejected", () => {
+    expect(() => parseEnv({ ...validEnv, BETTER_AUTH_URL: "not-a-url" })).toThrow(
+      /BETTER_AUTH_URL/,
+    );
   });
 
   test("schema output type matches Config", () => {

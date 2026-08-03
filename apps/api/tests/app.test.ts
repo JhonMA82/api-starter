@@ -18,6 +18,8 @@ const config: Config = {
   HOST: "0.0.0.0",
   CORS_ORIGINS: ["https://app.example.com"],
   DATABASE_URL: "postgres://postgres:postgres@localhost:5432/api",
+  BETTER_AUTH_SECRET: "test-secret-at-least-32-characters-long",
+  TRUSTED_ORIGINS: [],
 };
 
 const app = createApp(config);

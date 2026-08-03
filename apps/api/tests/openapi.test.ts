@@ -13,6 +13,8 @@ const config: Config = {
   HOST: "0.0.0.0",
   CORS_ORIGINS: ["https://app.example.com"],
   DATABASE_URL: "postgres://postgres:postgres@localhost:5432/api",
+  BETTER_AUTH_SECRET: "test-secret-at-least-32-characters-long",
+  TRUSTED_ORIGINS: [],
 };
 
 const app = createApp(config);
@@ -55,12 +57,24 @@ describe("openapi document", () => {
       if (EXCLUDED_PATHS.has(route.path)) {
         continue;
       }
+      if (route.path.includes("*")) {
+        continue;
+      }
       const pathKey = route.path.replaceAll(":", "{");
       if (!specPaths.has(pathKey)) {
         undocumented.push(`${route.method} ${route.path}`);
       }
     }
     expect(undocumented, `Undocumented route(s): ${undocumented.join(", ")}`).toEqual([]);
+  });
+
+  test("GET /api/auth/open-api/generate-schema returns a valid OpenAPI 3.1.1 document", async () => {
+    const res = await app.request("/api/auth/open-api/generate-schema");
+    expect(res.status).toBe(200);
+    const doc = (await res.json()) as OpenAPIV3_1.Document;
+    expect(doc.openapi).toBe("3.1.1");
+    expect(Object.keys(doc.paths ?? {})).not.toHaveLength(0);
+    expect(Object.keys(doc.paths ?? {}).some((path) => path.includes("sign-in/email"))).toBe(true);
   });
 
   test("every documented operation declares a 400 problem+json response with the ProblemDetails schema", async () => {

@@ -61,6 +61,7 @@ describe("server graceful shutdown", () => {
           PORT: String(port),
           HOST: "127.0.0.1",
           DATABASE_URL: "postgres://postgres:postgres@localhost:5432/api",
+          BETTER_AUTH_SECRET: "test-secret-at-least-32-characters-long",
         },
         stdout: "pipe",
         stderr: "pipe",

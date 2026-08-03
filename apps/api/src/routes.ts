@@ -83,7 +83,13 @@ export function createRoutes(config: Config): Hono {
       exclude: ["/openapi.json", "/docs"],
     }),
   );
-  app.get("/docs", apiReference({ url: "/openapi.json" }));
+  app.get(
+    "/docs",
+    apiReference({
+      url: "/openapi.json",
+      sources: [{ url: "/api/auth/open-api/generate-schema", title: "Auth" }],
+    }),
+  );
 
   return app;
 }
