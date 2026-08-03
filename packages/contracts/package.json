@@ -1,0 +1,13 @@
+{
+  "name": "@consulting/contracts",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "dependencies": {
+    "@consulting/core": "workspace:*",
+    "zod": "4.4.3"
+  }
+}
