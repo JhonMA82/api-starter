@@ -1,10 +1,16 @@
+import { createDomainEvent } from "../domain/domain-events";
 import {
   assertValidOrganizationName,
   assertValidSlug,
   type Organization,
 } from "../domain/organization.entity";
 import { OrganizationSlugError } from "../domain/organization.errors";
-import type { MembershipRepository, OrganizationRepository, UnitOfWork } from "./ports";
+import type {
+  MembershipRepository,
+  OrganizationRepository,
+  OutboxRepository,
+  UnitOfWork,
+} from "./ports";
 
 export interface CreateOrganizationDeps {
   organizations: OrganizationRepository;
@@ -38,7 +44,11 @@ export function createOrganizationUseCase(deps: CreateOrganizationDeps) {
 }
 
 async function createOrganizationWithMembership(
-  repos: { organizations: OrganizationRepository; memberships: MembershipRepository },
+  repos: {
+    organizations: OrganizationRepository;
+    memberships: MembershipRepository;
+    outbox?: OutboxRepository;
+  },
   input: CreateOrganizationInput,
 ): Promise<Organization> {
   const organization = await repos.organizations.create({ name: input.name, slug: input.slug });
@@ -47,5 +57,19 @@ async function createOrganizationWithMembership(
     userId: input.ownerUserId,
     role: "owner",
   });
+  if (repos.outbox !== undefined) {
+    await repos.outbox.append(
+      createDomainEvent({
+        type: "organization.created",
+        organizationId: organization.id,
+        actorUserId: input.ownerUserId,
+        payload: {
+          organizationId: organization.id,
+          slug: organization.slug,
+          name: organization.name,
+        },
+      }),
+    );
+  }
   return organization;
 }

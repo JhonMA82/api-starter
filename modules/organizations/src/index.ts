@@ -31,6 +31,7 @@ export type {
   InvitationRepository,
   MembershipRepository,
   OrganizationRepository,
+  OutboxRepository,
   UnitOfWork,
 } from "./application/ports";
 export type {
@@ -59,6 +60,12 @@ export type {
   TransferOwnershipUseCase,
 } from "./application/transfer-ownership";
 export { transferOwnershipUseCase } from "./application/transfer-ownership";
+export type {
+  DomainEvent,
+  DomainEventBase,
+  DomainEventType,
+} from "./domain/domain-events";
+export { createDomainEvent } from "./domain/domain-events";
 export type { Invitation } from "./domain/invitation.entity";
 export {
   assertInvitationUsable,
@@ -94,6 +101,11 @@ export {
   isOrganizationRole,
   ORGANIZATION_ROLES,
 } from "./domain/organization-roles";
+export type {
+  OutboxRecord,
+  OutboxStatus,
+} from "./domain/outbox.entity";
+export { isOutboxRetryable } from "./domain/outbox.entity";
 export type { TenantContext } from "./domain/tenant-context";
 export { createTenantContext } from "./domain/tenant-context";
 export {
@@ -112,5 +124,8 @@ export {
   createInvitationRepository,
   createMembershipRepository,
   createOrganizationRepository,
+  createOutboxRepository,
+  createUnitOfWork,
 } from "./infrastructure";
 export { organizationSchema } from "./infrastructure/organization.schema";
+export { outboxSchema } from "./infrastructure/outbox.schema";

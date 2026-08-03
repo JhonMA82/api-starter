@@ -7,6 +7,7 @@ export default defineConfig({
     "./packages/auth/src/auth.schema.ts",
     "./packages/audit/src/audit.schema.ts",
     "./modules/organizations/src/infrastructure/organization.schema.ts",
+    "./modules/organizations/src/infrastructure/outbox.schema.ts",
   ],
   out: "./migrations",
   strict: true,

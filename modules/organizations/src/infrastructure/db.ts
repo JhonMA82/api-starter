@@ -8,8 +8,9 @@ import {
 import postgres, { type Sql } from "postgres";
 
 import { invitations, memberships, organizations } from "./organization.schema";
+import { outboxEvents } from "./outbox.schema";
 
-export const schema = { organizations, memberships, invitations };
+export const schema = { organizations, memberships, invitations, outboxEvents };
 export type Db = PostgresJsDatabase<typeof schema>;
 export type DbTransaction = PgTransaction<
   PostgresJsQueryResultHKT,

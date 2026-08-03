@@ -6,8 +6,10 @@ import type {
   InvitationRepository,
   MembershipRepository,
   OrganizationRepository,
+  OutboxRepository,
   UnitOfWork,
 } from "../src/application/ports";
+import type { DomainEvent } from "../src/domain/domain-events";
 import type { Invitation } from "../src/domain/invitation.entity";
 import type { Membership } from "../src/domain/membership.entity";
 import type { Organization, OrganizationStatus } from "../src/domain/organization.entity";
@@ -17,6 +19,7 @@ import {
   OrganizationNotFoundError,
 } from "../src/domain/organization.errors";
 import type { OrganizationRole } from "../src/domain/organization-roles";
+import type { OutboxRecord } from "../src/domain/outbox.entity";
 
 export const NOW = new Date("2026-08-03T12:00:00.000Z");
 
@@ -49,9 +52,100 @@ export interface FakeRepositories {
   organizations: OrganizationRepository;
   memberships: MembershipRepository;
   invitations: InvitationRepository;
+  outbox: OutboxRepository;
   organizationStore: Map<string, Organization>;
   membershipStore: Map<string, Membership>;
   invitationStore: Map<string, Invitation>;
+  outboxStore: OutboxRecord[];
+}
+
+export function createFakeOutboxRepository(): {
+  outbox: OutboxRepository;
+  outboxStore: OutboxRecord[];
+} {
+  const outboxStore: OutboxRecord[] = [];
+  const findIndex = (eventId: string): number =>
+    outboxStore.findIndex((record) => record.eventId === eventId);
+
+  const outbox: OutboxRepository = {
+    async append(event: DomainEvent) {
+      if (findIndex(event.id) !== -1) {
+        return;
+      }
+      const now = new Date();
+      outboxStore.push({
+        id: crypto.randomUUID(),
+        eventId: event.id,
+        type: event.type,
+        organizationId: event.organizationId,
+        actorUserId: event.actorUserId,
+        payload: event.payload,
+        status: "pending",
+        attempts: 0,
+        maxAttempts: 5,
+        lastError: null,
+        nextAttemptAt: now,
+        processedAt: null,
+        createdAt: now,
+        updatedAt: now,
+      });
+    },
+    async findPendingDue(limit: number) {
+      const now = new Date();
+      return outboxStore
+        .filter(
+          (record) =>
+            record.status === "pending" && record.nextAttemptAt.getTime() <= now.getTime(),
+        )
+        .sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime())
+        .slice(0, limit);
+    },
+    async markProcessing(id: string) {
+      const record = outboxStore.find((r) => r.id === id);
+      if (record !== undefined) {
+        record.status = "processing";
+        record.updatedAt = new Date();
+      }
+    },
+    async markSucceeded(id: string) {
+      const record = outboxStore.find((r) => r.id === id);
+      if (record !== undefined) {
+        record.status = "succeeded";
+        record.processedAt = new Date();
+        record.updatedAt = new Date();
+      }
+    },
+    async markFailed(id: string, error: string) {
+      const record = outboxStore.find((r) => r.id === id);
+      if (record === undefined) {
+        return;
+      }
+      record.attempts += 1;
+      record.lastError = error;
+      record.status = record.attempts >= record.maxAttempts ? "dead_letter" : "failed";
+      record.updatedAt = new Date();
+    },
+    async listByStatus(status: string, limit: number) {
+      return outboxStore
+        .filter((record) => record.status === status)
+        .sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime())
+        .slice(0, limit);
+    },
+    async reprocess(id: string) {
+      const record = outboxStore.find((r) => r.id === id);
+      if (record === undefined) {
+        return;
+      }
+      record.status = "pending";
+      record.attempts = 0;
+      record.lastError = null;
+      record.nextAttemptAt = new Date();
+      record.processedAt = null;
+      record.updatedAt = new Date();
+    },
+  };
+
+  return { outbox, outboxStore };
 }
 
 export function createFakeRepositories(): FakeRepositories {
@@ -233,6 +327,7 @@ export function createFakeRepositories(): FakeRepositories {
     organizationStore,
     membershipStore,
     invitationStore,
+    ...createFakeOutboxRepository(),
   };
 }
 
@@ -274,6 +369,13 @@ export function createFakeUnitOfWork(repos: FakeRepositories): {
       },
     },
     invitations: repos.invitations,
+    outbox: {
+      ...repos.outbox,
+      append: async (event: DomainEvent) => {
+        calls.push("outbox.append");
+        return repos.outbox.append(event);
+      },
+    },
   };
   return { uow, calls };
 }

@@ -1,7 +1,9 @@
+import type { DomainEvent } from "../domain/domain-events";
 import type { Invitation } from "../domain/invitation.entity";
 import type { Membership, MembershipStatus } from "../domain/membership.entity";
 import type { Organization, OrganizationStatus } from "../domain/organization.entity";
 import type { OrganizationRole } from "../domain/organization-roles";
+import type { OutboxRecord } from "../domain/outbox.entity";
 
 export interface CreateOrganizationInput {
   name: string;
@@ -62,9 +64,20 @@ export interface InvitationRepository {
   delete(input: { organizationId: string; id: string }): Promise<void>;
 }
 
+export interface OutboxRepository {
+  append(event: DomainEvent): Promise<void>;
+  findPendingDue(limit: number): Promise<OutboxRecord[]>;
+  markProcessing(id: string): Promise<void>;
+  markSucceeded(id: string): Promise<void>;
+  markFailed(id: string, error: string): Promise<void>;
+  listByStatus(status: string, limit: number): Promise<OutboxRecord[]>;
+  reprocess(id: string): Promise<void>;
+}
+
 export interface UnitOfWork {
   run<T>(work: (uow: UnitOfWork) => Promise<T>): Promise<T>;
   readonly organizations: OrganizationRepository;
   readonly memberships: MembershipRepository;
   readonly invitations: InvitationRepository;
+  readonly outbox: OutboxRepository;
 }

@@ -38,6 +38,7 @@ const PUBLIC_TABLES = [
   "memberships",
   "notes",
   "organizations",
+  "outbox_events",
   "session",
   "user",
   "verification",
@@ -159,7 +160,7 @@ describeDb("organizations migrations (real database)", () => {
     await closeClient(client);
   });
 
-  test("from zero creates 9 public tables and Drizzle bookkeeping", async () => {
+  test("from zero creates 10 public tables and Drizzle bookkeeping", async () => {
     await resetDatabase(client);
     await migrateToLatest(client);
 
@@ -171,7 +172,7 @@ describeDb("organizations migrations (real database)", () => {
     `);
     expect(publicTables.map((row) => row.table_name)).toEqual(PUBLIC_TABLES);
     await expectOrganizationSchema(client);
-    await expectBookkeeping(client, "5");
+    await expectBookkeeping(client, "6");
   });
 
   test("0003-only database upgrades to the full organizational schema", async () => {
@@ -212,7 +213,7 @@ describeDb("organizations migrations (real database)", () => {
       await migrateToLatest(client);
 
       await expectOrganizationSchema(client);
-      await expectBookkeeping(client, "5");
+      await expectBookkeeping(client, "6");
     } finally {
       rmSync(tempDir, { recursive: true, force: true });
     }
@@ -224,7 +225,7 @@ describeDb("organizations migrations (real database)", () => {
     await migrateToLatest(client);
 
     await expectOrganizationSchema(client);
-    await expectBookkeeping(client, "5");
+    await expectBookkeeping(client, "6");
   });
 
   test("memberships FK to auth user and cascade on organization delete", async () => {

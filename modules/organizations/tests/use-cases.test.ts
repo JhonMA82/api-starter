@@ -711,7 +711,7 @@ describe("createOrganizationUseCase with UnitOfWork", () => {
 
     const org = await useCase({ name: "Acme Inc", slug: "acme-inc", ownerUserId: "user-1" });
 
-    expect(calls).toEqual(["run", "organizations.create", "memberships.create"]);
+    expect(calls).toEqual(["run", "organizations.create", "memberships.create", "outbox.append"]);
     expect(repos.organizationStore.get(org.id)?.slug).toBe("acme-inc");
     expect([...repos.membershipStore.values()][0]).toMatchObject({
       organizationId: org.id,
