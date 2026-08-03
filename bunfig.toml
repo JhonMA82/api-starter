@@ -2,3 +2,13 @@
 coverageThreshold = 0.8
 coverageSkipTestFiles = true
 coverageReporter = ["text", "lcov"]
+# CP-B (Q2): the no-DB coverage run must stay green. bun 1.3.14 enforces
+# coverageThreshold PER FILE (bunfig.rs/CodeCoverage.rs); DB-exercised
+# infrastructure and test helpers sit at ~0-50% without DATABASE_URL and fail
+# the gate. integration-test/migration-test verify them instead. Key verified
+# for 1.3.14: coveragePathIgnorePatterns (coverageExclude/Include do not
+# exist).
+coveragePathIgnorePatterns = [
+  "**/modules/notes/src/infrastructure/**",
+  "**/modules/notes/tests/db-test-utils.ts",
+]
