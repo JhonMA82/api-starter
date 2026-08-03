@@ -66,6 +66,7 @@ function appWithAuth(auth: StubAuth, repos: FakeRepositories) {
         memberships: repos.memberships,
         invitations: repos.invitations,
         apiKeys: repos.apiKeys,
+        webhooks: repos.webhooks,
         uow: null,
       },
     },

@@ -15,6 +15,7 @@ import {
 } from "../application/create-organization";
 import { deleteOrganizationUseCase } from "../application/delete-organization";
 import { inviteMemberUseCase } from "../application/invite-member";
+import { listWebhooksUseCase, type PublicWebhookEndpoint } from "../application/list-webhooks";
 import type { OrganizationAudit } from "../application/organization-audit";
 import type {
   ApiKeyRepository,
@@ -22,17 +23,22 @@ import type {
   MembershipRepository,
   OrganizationRepository,
   UnitOfWork,
+  WebhookRepository,
 } from "../application/ports";
+import { registerWebhookUseCase } from "../application/register-webhook";
 import { removeMemberUseCase } from "../application/remove-member";
 import { revokeApiKeyUseCase } from "../application/revoke-api-key";
+import { rotateWebhookSecretUseCase } from "../application/rotate-webhook-secret";
 import { suspendOrganizationUseCase } from "../application/suspend-organization";
 import type { TenancyService } from "../application/tenancy-service";
+import { toggleWebhookUseCase } from "../application/toggle-webhook";
 import { transferOwnershipUseCase } from "../application/transfer-ownership";
 import type { ApiKey } from "../domain/api-key.entity";
 import type { Invitation } from "../domain/invitation.entity";
 import type { Membership } from "../domain/membership.entity";
 import type { Organization } from "../domain/organization.entity";
 import type { TenantContext } from "../domain/tenant-context";
+import type { WebhookDelivery } from "../domain/webhook.entity";
 import { toHttpException } from "./errors";
 import {
   AcceptInvitationBody,
@@ -47,9 +53,15 @@ import {
   type MembershipResponse as MembershipResponseType,
   OrganizationResponse,
   type OrganizationResponse as OrganizationResponseType,
+  RegisterWebhookBody,
   TenantContextResponse,
   type TenantContextResponse as TenantContextResponseType,
+  ToggleWebhookBody,
   TransferOwnershipBody,
+  WebhookDeliveryResponse,
+  type WebhookDeliveryResponse as WebhookDeliveryResponseType,
+  WebhookEndpointResponse,
+  type WebhookEndpointResponse as WebhookEndpointResponseType,
 } from "./schemas";
 import { createTenantContextMiddleware, type OrganizationHttpVariables } from "./tenant-middleware";
 
@@ -157,12 +169,41 @@ function toApiKeyResponse(apiKey: ApiKey): ApiKeyResponseType {
   };
 }
 
+function toWebhookEndpointResponse(endpoint: PublicWebhookEndpoint): WebhookEndpointResponseType {
+  return {
+    id: endpoint.id,
+    organizationId: endpoint.organizationId,
+    url: endpoint.url,
+    events: [...endpoint.events],
+    active: endpoint.active,
+    createdAt: endpoint.createdAt.toISOString(),
+    updatedAt: endpoint.updatedAt.toISOString(),
+  };
+}
+
+function toWebhookDeliveryResponse(delivery: WebhookDelivery): WebhookDeliveryResponseType {
+  return {
+    id: delivery.id,
+    endpointId: delivery.endpointId,
+    eventId: delivery.eventId,
+    payload: delivery.payload,
+    status: delivery.status,
+    attempts: delivery.attempts,
+    lastStatusCode: delivery.lastStatusCode,
+    lastError: delivery.lastError,
+    nextAttemptAt: delivery.nextAttemptAt.toISOString(),
+    createdAt: delivery.createdAt.toISOString(),
+    updatedAt: delivery.updatedAt.toISOString(),
+  };
+}
+
 export interface OrganizationRoutesDeps {
   tenancy: TenancyService;
   organizations: OrganizationRepository;
   memberships: MembershipRepository;
   invitations: InvitationRepository;
   apiKeys: ApiKeyRepository;
+  webhooks: WebhookRepository;
   uow: UnitOfWork | null;
   audit: OrganizationAudit | null;
 }
@@ -197,6 +238,28 @@ export function createOrganizationRoutes(
     apiKeys: deps.apiKeys,
     ...(deps.audit === null ? {} : { audit: deps.audit }),
     ...(deps.uow === null ? {} : { uow: deps.uow }),
+  });
+  const registerWebhook = registerWebhookUseCase({
+    organizations: deps.organizations,
+    memberships: deps.memberships,
+    webhooks: deps.webhooks,
+    ...(deps.audit === null ? {} : { audit: deps.audit }),
+  });
+  const rotateWebhookSecret = rotateWebhookSecretUseCase({
+    organizations: deps.organizations,
+    memberships: deps.memberships,
+    webhooks: deps.webhooks,
+    ...(deps.audit === null ? {} : { audit: deps.audit }),
+  });
+  const listWebhooks = listWebhooksUseCase({
+    organizations: deps.organizations,
+    memberships: deps.memberships,
+    webhooks: deps.webhooks,
+  });
+  const toggleWebhook = toggleWebhookUseCase({
+    organizations: deps.organizations,
+    memberships: deps.memberships,
+    webhooks: deps.webhooks,
   });
 
   app.post(
@@ -572,6 +635,208 @@ export function createOrganizationRoutes(
           keyId: c.req.param("keyId") as string,
         });
         return c.body(null, 204);
+      } catch (error) {
+        throw toHttpException(error);
+      }
+    },
+  );
+
+  app.post(
+    "/organizations/:id/webhooks",
+    describeRoute({
+      description:
+        "Registers an outgoing webhook endpoint; the raw signing secret is returned exactly once and never again",
+      responses: {
+        201: {
+          description: "Webhook endpoint registered with its one-time signing secret",
+          content: {
+            "application/json": {
+              schema: resolver(
+                z.object({ endpoint: WebhookEndpointResponse, secret: z.string().min(32) }),
+              ),
+            },
+          },
+        },
+        ...tenantResponses(),
+      },
+    }),
+    tenantContext,
+    sValidator("json", RegisterWebhookBody, validationErrorHandler),
+    async (c) => {
+      const user = c.get("user");
+      if (user === null) {
+        throw new HTTPException(401);
+      }
+      const { url, events } = c.req.valid("json");
+      try {
+        const { endpoint, secret } = await registerWebhook({
+          actorUserId: user.id,
+          // The route pattern guarantees the :id segment; the middleware chain
+          // widens the path type so Hono's fallback overload returns string | undefined.
+          organizationId: c.req.param("id") as string,
+          url,
+          ...(events === undefined ? {} : { events }),
+        });
+        return c.json({ endpoint: toWebhookEndpointResponse(endpoint), secret }, 201);
+      } catch (error) {
+        throw toHttpException(error);
+      }
+    },
+  );
+
+  app.get(
+    "/organizations/:id/webhooks",
+    describeRoute({
+      description:
+        "Lists the organization's webhook endpoints (signing secrets are never returned)",
+      responses: {
+        200: {
+          description: "Webhook endpoints of the organization",
+          content: {
+            "application/json": { schema: resolver(z.array(WebhookEndpointResponse)) },
+          },
+        },
+        ...tenantResponses(),
+      },
+    }),
+    tenantContext,
+    async (c) => {
+      const user = c.get("user");
+      if (user === null) {
+        throw new HTTPException(401);
+      }
+      try {
+        const endpoints = await listWebhooks({
+          actorUserId: user.id,
+          // The route pattern guarantees the :id segment; the middleware chain
+          // widens the path type so Hono's fallback overload returns string | undefined.
+          organizationId: c.req.param("id") as string,
+        });
+        return c.json(endpoints.map(toWebhookEndpointResponse), 200);
+      } catch (error) {
+        throw toHttpException(error);
+      }
+    },
+  );
+
+  app.post(
+    "/organizations/:id/webhooks/:webhookId/rotate",
+    describeRoute({
+      description:
+        "Rotates the signing secret of a webhook endpoint; the new secret is returned exactly once",
+      responses: {
+        200: {
+          description: "Signing secret rotated",
+          content: {
+            "application/json": {
+              schema: resolver(
+                z.object({ endpoint: WebhookEndpointResponse, secret: z.string().min(32) }),
+              ),
+            },
+          },
+        },
+        ...tenantResponses(),
+      },
+    }),
+    tenantContext,
+    async (c) => {
+      const user = c.get("user");
+      if (user === null) {
+        throw new HTTPException(401);
+      }
+      try {
+        const { endpoint, secret } = await rotateWebhookSecret({
+          actorUserId: user.id,
+          // The route pattern guarantees the :id segment; the middleware chain
+          // widens the path type so Hono's fallback overload returns string | undefined.
+          organizationId: c.req.param("id") as string,
+          webhookId: c.req.param("webhookId") as string,
+        });
+        return c.json({ endpoint: toWebhookEndpointResponse(endpoint), secret }, 200);
+      } catch (error) {
+        throw toHttpException(error);
+      }
+    },
+  );
+
+  app.post(
+    "/organizations/:id/webhooks/:webhookId/toggle",
+    describeRoute({
+      description: "Activates or deactivates a webhook endpoint",
+      responses: {
+        200: {
+          description: "Webhook endpoint updated",
+          content: {
+            "application/json": { schema: resolver(WebhookEndpointResponse) },
+          },
+        },
+        ...tenantResponses(),
+      },
+    }),
+    tenantContext,
+    sValidator("json", ToggleWebhookBody, validationErrorHandler),
+    async (c) => {
+      const user = c.get("user");
+      if (user === null) {
+        throw new HTTPException(401);
+      }
+      const { active } = c.req.valid("json");
+      try {
+        const endpoint = await toggleWebhook({
+          actorUserId: user.id,
+          // The route pattern guarantees the :id segment; the middleware chain
+          // widens the path type so Hono's fallback overload returns string | undefined.
+          organizationId: c.req.param("id") as string,
+          webhookId: c.req.param("webhookId") as string,
+          active,
+        });
+        return c.json(toWebhookEndpointResponse(endpoint), 200);
+      } catch (error) {
+        throw toHttpException(error);
+      }
+    },
+  );
+
+  app.get(
+    "/organizations/:id/webhooks/:webhookId/deliveries",
+    describeRoute({
+      description: "Lists the delivery history of a webhook endpoint (redacted payloads)",
+      responses: {
+        200: {
+          description: "Delivery history of the webhook endpoint",
+          content: {
+            "application/json": { schema: resolver(z.array(WebhookDeliveryResponse)) },
+          },
+        },
+        ...tenantResponses(),
+      },
+    }),
+    tenantContext,
+    sValidator(
+      "query",
+      z.object({ limit: z.coerce.number().int().min(1).max(100).default(20) }),
+      validationErrorHandler,
+    ),
+    async (c) => {
+      const user = c.get("user");
+      if (user === null) {
+        throw new HTTPException(401);
+      }
+      try {
+        const endpoint = await deps.webhooks.findEndpointById({
+          // The route pattern guarantees the :id segment; the middleware chain
+          // widens the path type so Hono's fallback overload returns string | undefined.
+          organizationId: c.req.param("id") as string,
+          id: c.req.param("webhookId") as string,
+        });
+        if (endpoint === null) {
+          throw new HTTPException(404);
+        }
+        const deliveries = await deps.webhooks.findDeliveriesByEndpoint(
+          endpoint.id,
+          c.req.valid("query").limit,
+        );
+        return c.json(deliveries.map(toWebhookDeliveryResponse), 200);
       } catch (error) {
         throw toHttpException(error);
       }

@@ -9,6 +9,7 @@ export default defineConfig({
     "./modules/organizations/src/infrastructure/organization.schema.ts",
     "./modules/organizations/src/infrastructure/api-key.schema.ts",
     "./modules/organizations/src/infrastructure/outbox.schema.ts",
+    "./modules/organizations/src/infrastructure/webhook.schema.ts",
     "./modules/jobs/src/infrastructure/job.schema.ts",
   ],
   out: "./migrations",

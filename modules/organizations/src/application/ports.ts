@@ -1,10 +1,11 @@
 import type { ApiKey } from "../domain/api-key.entity";
-import type { DomainEvent } from "../domain/domain-events";
+import type { DomainEvent, DomainEventType } from "../domain/domain-events";
 import type { Invitation } from "../domain/invitation.entity";
 import type { Membership, MembershipStatus } from "../domain/membership.entity";
 import type { Organization, OrganizationStatus } from "../domain/organization.entity";
 import type { OrganizationRole } from "../domain/organization-roles";
 import type { OutboxRecord } from "../domain/outbox.entity";
+import type { WebhookDelivery, WebhookEndpoint } from "../domain/webhook.entity";
 
 export interface CreateOrganizationInput {
   name: string;
@@ -94,11 +95,50 @@ export interface ApiKeyRepository {
   markUsed(id: string, usedAt: Date): Promise<void>;
 }
 
+export interface WebhookRepository {
+  createEndpoint(input: {
+    organizationId: string;
+    url: string;
+    secret: string;
+    events: readonly DomainEventType[];
+  }): Promise<WebhookEndpoint>;
+  findEndpointById(input: { organizationId: string; id: string }): Promise<WebhookEndpoint | null>;
+  listEndpointsByOrganization(organizationId: string): Promise<WebhookEndpoint[]>;
+  findActiveEndpointsByEvent(
+    organizationId: string,
+    eventType: DomainEventType,
+  ): Promise<WebhookEndpoint[]>;
+  rotateSecret(input: {
+    organizationId: string;
+    id: string;
+    secret: string;
+  }): Promise<WebhookEndpoint>;
+  setActive(input: {
+    organizationId: string;
+    id: string;
+    active: boolean;
+  }): Promise<WebhookEndpoint>;
+  createDelivery(input: {
+    endpointId: string;
+    eventId: string;
+    payload: Record<string, unknown>;
+  }): Promise<WebhookDelivery>;
+  findDeliveriesByEndpoint(endpointId: string, limit: number): Promise<WebhookDelivery[]>;
+  markDeliverySucceeded(id: string, statusCode: number): Promise<WebhookDelivery>;
+  markDeliveryFailed(
+    id: string,
+    error: string,
+    statusCode: number | null,
+    nextAttemptAt: Date,
+  ): Promise<WebhookDelivery>;
+}
+
 export interface UnitOfWork {
   run<T>(work: (uow: UnitOfWork) => Promise<T>): Promise<T>;
   readonly organizations: OrganizationRepository;
   readonly memberships: MembershipRepository;
   readonly invitations: InvitationRepository;
   readonly apiKeys: ApiKeyRepository;
+  readonly webhooks: WebhookRepository;
   readonly outbox: OutboxRepository;
 }

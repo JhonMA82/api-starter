@@ -25,6 +25,17 @@ export type {
   DeleteOrganizationUseCase,
 } from "./application/delete-organization";
 export { deleteOrganizationUseCase } from "./application/delete-organization";
+export {
+  buildWebhookHeaders,
+  computeWebhookNextAttemptAt,
+  createWebhookDeliverer,
+  WEBHOOK_BACKOFF_BASE_MS,
+  WEBHOOK_BACKOFF_MAX_MS,
+  type WebhookDeliverer,
+  type WebhookDelivererDeps,
+  type WebhookDeliverInput,
+  type WebhookDeliverResult,
+} from "./application/deliver-webhook";
 export type {
   InviteMemberDeps,
   InviteMemberInput,
@@ -32,6 +43,13 @@ export type {
   InviteMemberUseCase,
 } from "./application/invite-member";
 export { inviteMemberUseCase } from "./application/invite-member";
+export type {
+  ListWebhooksDeps,
+  ListWebhooksInput,
+  ListWebhooksUseCase,
+  PublicWebhookEndpoint,
+} from "./application/list-webhooks";
+export { listWebhooksUseCase } from "./application/list-webhooks";
 export type { OrganizationAudit } from "./application/organization-audit";
 export { createOrganizationAudit } from "./application/organization-audit";
 export type {
@@ -49,7 +67,15 @@ export type {
   OrganizationRepository,
   OutboxRepository,
   UnitOfWork,
+  WebhookRepository,
 } from "./application/ports";
+export type {
+  RegisterWebhookDeps,
+  RegisterWebhookInput,
+  RegisterWebhookResult,
+  RegisterWebhookUseCase,
+} from "./application/register-webhook";
+export { registerWebhookUseCase } from "./application/register-webhook";
 export type {
   RemoveMemberDeps,
   RemoveMemberInput,
@@ -63,6 +89,13 @@ export type {
 } from "./application/revoke-api-key";
 export { revokeApiKeyUseCase } from "./application/revoke-api-key";
 export type {
+  RotateWebhookSecretDeps,
+  RotateWebhookSecretInput,
+  RotateWebhookSecretResult,
+  RotateWebhookSecretUseCase,
+} from "./application/rotate-webhook-secret";
+export { rotateWebhookSecretUseCase } from "./application/rotate-webhook-secret";
+export type {
   SuspendOrganizationDeps,
   SuspendOrganizationInput,
   SuspendOrganizationUseCase,
@@ -74,6 +107,12 @@ export type {
   TenancyService,
 } from "./application/tenancy-service";
 export { createTenancyService } from "./application/tenancy-service";
+export type {
+  ToggleWebhookDeps,
+  ToggleWebhookInput,
+  ToggleWebhookUseCase,
+} from "./application/toggle-webhook";
+export { toggleWebhookUseCase } from "./application/toggle-webhook";
 export { createInvitationToken, hashInvitationToken } from "./application/token";
 export type {
   TransferOwnershipDeps,
@@ -88,6 +127,9 @@ export type {
   VerifyApiKeyUseCase,
 } from "./application/verify-api-key";
 export { verifyApiKeyUseCase } from "./application/verify-api-key";
+export type { WebhookOutboxHandlerDeps } from "./application/webhook-outbox-handler";
+export { createWebhookOutboxHandler } from "./application/webhook-outbox-handler";
+export { createWebhookSecret } from "./application/webhook-token";
 export type { ApiKey } from "./domain/api-key.entity";
 export { assertValidApiKeyName, isApiKeyActive } from "./domain/api-key.entity";
 export type { DomainEvent, DomainEventBase, DomainEventType } from "./domain/domain-events";
@@ -122,6 +164,10 @@ export {
   OrganizationSlugError,
   OrganizationSuspendedError,
   OwnerConstraintError,
+  WebhookEndpointNotFoundError,
+  WebhookEventTypeError,
+  WebhookNotActiveError,
+  WebhookUrlError,
 } from "./domain/organization.errors";
 export type { OrganizationRole } from "./domain/organization-roles";
 export {
@@ -137,6 +183,13 @@ export { isOutboxRetryable } from "./domain/outbox.entity";
 export { OutboxEventNotFoundError } from "./domain/outbox.errors";
 export type { TenantContext } from "./domain/tenant-context";
 export { createTenantContext } from "./domain/tenant-context";
+export type { WebhookDelivery, WebhookEndpoint } from "./domain/webhook.entity";
+export {
+  assertValidWebhookUrl,
+  endpointSubscribesTo,
+  normalizeEventTypes,
+  redactSensitiveKeys,
+} from "./domain/webhook.entity";
 export {
   type ApiKeyMiddlewareDeps,
   type ApiKeyMiddlewareVariables,
@@ -162,7 +215,10 @@ export {
   createOrganizationRepository,
   createOutboxRepository,
   createUnitOfWork,
+  createWebhookRepository,
+  defaultWebhookDeliver,
 } from "./infrastructure";
 export { apiKeySchema } from "./infrastructure/api-key.schema";
 export { organizationSchema } from "./infrastructure/organization.schema";
 export { outboxSchema } from "./infrastructure/outbox.schema";
+export { webhookSchema } from "./infrastructure/webhook.schema";

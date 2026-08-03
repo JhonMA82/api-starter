@@ -17,6 +17,7 @@ import {
   type MembershipRepository,
   type OrganizationRepository,
   type UnitOfWork,
+  type WebhookRepository,
 } from "@consulting/module-organizations";
 import { apiReference } from "@scalar/hono-api-reference";
 import { Hono } from "hono";
@@ -49,6 +50,7 @@ export interface OrganizationsHttpOptions {
     memberships: MembershipRepository;
     invitations: InvitationRepository;
     apiKeys: ApiKeyRepository;
+    webhooks: WebhookRepository;
     uow: UnitOfWork | null;
   };
   audit?: AuditLogger;

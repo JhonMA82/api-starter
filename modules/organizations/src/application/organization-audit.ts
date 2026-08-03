@@ -23,6 +23,16 @@ export type OrganizationAudit = {
     organizationId: string,
     metadata: { name: string; prefix: string },
   ): Promise<void>;
+  webhookRegistered(
+    actorUserId: string,
+    organizationId: string,
+    metadata: { url: string; events: string[] },
+  ): Promise<void>;
+  webhookSecretRotated(
+    actorUserId: string,
+    organizationId: string,
+    metadata: { url: string },
+  ): Promise<void>;
 };
 
 export function createOrganizationAudit(audit: AuditLogger): OrganizationAudit {
@@ -109,6 +119,26 @@ export function createOrganizationAudit(audit: AuditLogger): OrganizationAudit {
         actorUserId,
         action: "api_key.revoked",
         resourceType: "api_key",
+        resourceId: organizationId,
+        outcome: "success",
+        metadata,
+      });
+    },
+    webhookRegistered(actorUserId, organizationId, metadata) {
+      return audit.record({
+        actorUserId,
+        action: "webhook.registered",
+        resourceType: "webhook_endpoint",
+        resourceId: organizationId,
+        outcome: "success",
+        metadata,
+      });
+    },
+    webhookSecretRotated(actorUserId, organizationId, metadata) {
+      return audit.record({
+        actorUserId,
+        action: "webhook.secret_rotated",
+        resourceType: "webhook_endpoint",
         resourceId: organizationId,
         outcome: "success",
         metadata,

@@ -46,6 +46,8 @@ const PUBLIC_TABLES = [
   "session",
   "user",
   "verification",
+  "webhook_deliveries",
+  "webhook_endpoints",
 ];
 
 async function expectOutboxSchema(client: Sql): Promise<void> {
@@ -123,7 +125,7 @@ describeDb("outbox migrations (real database)", () => {
     await closeClient(client);
   });
 
-  test("from zero creates 12 public tables including outbox_events and Drizzle bookkeeping", async () => {
+  test("from zero creates 14 public tables including outbox_events and Drizzle bookkeeping", async () => {
     await resetDatabase(client);
     await migrateToLatest(client);
 
@@ -135,7 +137,7 @@ describeDb("outbox migrations (real database)", () => {
     `);
     expect(publicTables.map((row) => row.table_name)).toEqual(PUBLIC_TABLES);
     await expectOutboxSchema(client);
-    await expectBookkeeping(client, "8");
+    await expectBookkeeping(client, "9");
   });
 
   test("0004-only database upgrades to include outbox_events", async () => {
@@ -189,7 +191,7 @@ describeDb("outbox migrations (real database)", () => {
       );
       expect(after.map((row) => row.table_name)).toEqual(PUBLIC_TABLES);
       await expectOutboxSchema(client);
-      await expectBookkeeping(client, "8");
+      await expectBookkeeping(client, "9");
     } finally {
       rmSync(tempDir, { recursive: true, force: true });
     }
@@ -201,6 +203,6 @@ describeDb("outbox migrations (real database)", () => {
     await migrateToLatest(client);
 
     await expectOutboxSchema(client);
-    await expectBookkeeping(client, "8");
+    await expectBookkeeping(client, "9");
   });
 });

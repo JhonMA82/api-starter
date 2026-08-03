@@ -8,6 +8,7 @@ import {
   createInvitationRepository,
   createMembershipRepository,
   createOrganizationRepository,
+  createWebhookRepository,
 } from "@consulting/module-organizations";
 
 import {
@@ -140,6 +141,7 @@ describeDb("organization HTTP API (real database)", () => {
           memberships: createMembershipRepository(db),
           invitations: createInvitationRepository(db),
           apiKeys: createApiKeyRepository(db),
+          webhooks: createWebhookRepository(db),
           uow: null,
         },
         audit: auditLogger,

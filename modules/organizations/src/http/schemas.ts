@@ -87,3 +87,40 @@ export const ApiKeyResponse = z.object({
   createdAt: z.iso.datetime(),
 });
 export type ApiKeyResponse = z.infer<typeof ApiKeyResponse>;
+
+export const RegisterWebhookBody = z.object({
+  url: z.string().min(1).max(2048),
+  events: z.array(z.string().min(1)).optional(),
+});
+export type RegisterWebhookBody = z.infer<typeof RegisterWebhookBody>;
+
+export const ToggleWebhookBody = z.object({
+  active: z.boolean(),
+});
+export type ToggleWebhookBody = z.infer<typeof ToggleWebhookBody>;
+
+export const WebhookEndpointResponse = z.object({
+  id: z.string(),
+  organizationId: z.string(),
+  url: z.string(),
+  events: z.array(z.string()),
+  active: z.boolean(),
+  createdAt: z.iso.datetime(),
+  updatedAt: z.iso.datetime(),
+});
+export type WebhookEndpointResponse = z.infer<typeof WebhookEndpointResponse>;
+
+export const WebhookDeliveryResponse = z.object({
+  id: z.string(),
+  endpointId: z.string(),
+  eventId: z.string(),
+  payload: z.record(z.string(), z.unknown()),
+  status: z.enum(["pending", "succeeded", "failed"]),
+  attempts: z.number(),
+  lastStatusCode: z.number().nullable(),
+  lastError: z.string().nullable(),
+  nextAttemptAt: z.iso.datetime(),
+  createdAt: z.iso.datetime(),
+  updatedAt: z.iso.datetime(),
+});
+export type WebhookDeliveryResponse = z.infer<typeof WebhookDeliveryResponse>;

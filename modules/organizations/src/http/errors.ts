@@ -17,6 +17,10 @@ import {
   OrganizationSlugError,
   OrganizationSuspendedError,
   OwnerConstraintError,
+  WebhookEndpointNotFoundError,
+  WebhookEventTypeError,
+  WebhookNotActiveError,
+  WebhookUrlError,
 } from "../domain/organization.errors";
 
 /**
@@ -32,7 +36,7 @@ export function toHttpException(error: unknown): unknown {
   if (error instanceof OrganizationNotFoundError || error instanceof InvitationNotFoundError) {
     return new HTTPException(404);
   }
-  if (error instanceof ApiKeyNotFoundError) {
+  if (error instanceof ApiKeyNotFoundError || error instanceof WebhookEndpointNotFoundError) {
     return new HTTPException(404);
   }
   if (
@@ -54,7 +58,10 @@ export function toHttpException(error: unknown): unknown {
     error instanceof InvitationAlreadyUsedError ||
     error instanceof OwnerConstraintError ||
     error instanceof OrganizationDeletionRequiresConfirmationError ||
-    error instanceof ApiKeyNameError
+    error instanceof ApiKeyNameError ||
+    error instanceof WebhookUrlError ||
+    error instanceof WebhookEventTypeError ||
+    error instanceof WebhookNotActiveError
   ) {
     return new HTTPException(400);
   }

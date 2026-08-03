@@ -44,8 +44,9 @@ const PUBLIC_TABLES = [
   "session",
   "user",
   "verification",
+  "webhook_deliveries",
+  "webhook_endpoints",
 ];
-
 async function expectOrganizationSchema(client: Sql): Promise<void> {
   type Column = { table_name: string; column_name: string };
   const columns = (await client.unsafe<Column[]>(`
@@ -55,6 +56,7 @@ async function expectOrganizationSchema(client: Sql): Promise<void> {
       AND table_name IN ('organizations', 'memberships', 'invitations', 'api_keys')
     ORDER BY table_name, ordinal_position
   `)) as unknown as Column[];
+
   expect(columns).toEqual([
     { table_name: "api_keys", column_name: "id" },
     { table_name: "api_keys", column_name: "organization_id" },
@@ -152,6 +154,71 @@ async function expectOrganizationSchema(client: Sql): Promise<void> {
   ]);
 }
 
+async function expectWebhookSchema(client: Sql): Promise<void> {
+  type Column = { table_name: string; column_name: string };
+  const columns = (await client.unsafe<Column[]>(`
+    SELECT table_name, column_name
+    FROM information_schema.columns
+    WHERE table_schema = 'public'
+      AND table_name IN ('webhook_deliveries', 'webhook_endpoints')
+    ORDER BY table_name, ordinal_position
+  `)) as unknown as Column[];
+  expect(columns).toEqual([
+    { table_name: "webhook_deliveries", column_name: "id" },
+    { table_name: "webhook_deliveries", column_name: "endpoint_id" },
+    { table_name: "webhook_deliveries", column_name: "event_id" },
+    { table_name: "webhook_deliveries", column_name: "payload" },
+    { table_name: "webhook_deliveries", column_name: "status" },
+    { table_name: "webhook_deliveries", column_name: "attempts" },
+    { table_name: "webhook_deliveries", column_name: "last_status_code" },
+    { table_name: "webhook_deliveries", column_name: "last_error" },
+    { table_name: "webhook_deliveries", column_name: "next_attempt_at" },
+    { table_name: "webhook_deliveries", column_name: "created_at" },
+    { table_name: "webhook_deliveries", column_name: "updated_at" },
+    { table_name: "webhook_endpoints", column_name: "id" },
+    { table_name: "webhook_endpoints", column_name: "organization_id" },
+    { table_name: "webhook_endpoints", column_name: "url" },
+    { table_name: "webhook_endpoints", column_name: "secret" },
+    { table_name: "webhook_endpoints", column_name: "events" },
+    { table_name: "webhook_endpoints", column_name: "active" },
+    { table_name: "webhook_endpoints", column_name: "created_at" },
+    { table_name: "webhook_endpoints", column_name: "updated_at" },
+  ]);
+
+  const indexes = await client.unsafe<{ indexname: string }[]>(`
+    SELECT indexname
+    FROM pg_indexes
+    WHERE schemaname = 'public'
+      AND indexname IN (
+        'webhook_deliveries_endpoint_id_idx',
+        'webhook_deliveries_status_idx',
+        'webhook_endpoints_organization_id_idx'
+      )
+    ORDER BY indexname
+  `);
+  expect(indexes.map((row) => row.indexname)).toEqual([
+    "webhook_deliveries_endpoint_id_idx",
+    "webhook_deliveries_status_idx",
+    "webhook_endpoints_organization_id_idx",
+  ]);
+
+  type ForeignKey = { conname: string; confdeltype: string };
+  const foreignKeys = (await client.unsafe<ForeignKey[]>(`
+    SELECT conname, confdeltype
+    FROM pg_constraint
+    WHERE contype = 'f'
+      AND conrelid IN (
+        'public.webhook_deliveries'::regclass,
+        'public.webhook_endpoints'::regclass
+      )
+    ORDER BY conname
+  `)) as unknown as ForeignKey[];
+  expect(foreignKeys).toEqual([
+    { conname: "webhook_deliveries_endpoint_id_webhook_endpoints_id_fk", confdeltype: "c" },
+    { conname: "webhook_endpoints_organization_id_organizations_id_fk", confdeltype: "c" },
+  ]);
+}
+
 async function expectBookkeeping(client: Sql, count: string): Promise<void> {
   const tables = await client.unsafe<{ table_name: string }[]>(`
     SELECT table_name
@@ -178,7 +245,7 @@ describeDb("organizations migrations (real database)", () => {
     await closeClient(client);
   });
 
-  test("from zero creates 12 public tables and Drizzle bookkeeping", async () => {
+  test("from zero creates 14 public tables and Drizzle bookkeeping", async () => {
     await resetDatabase(client);
     await migrateToLatest(client);
 
@@ -190,7 +257,8 @@ describeDb("organizations migrations (real database)", () => {
     `);
     expect(publicTables.map((row) => row.table_name)).toEqual(PUBLIC_TABLES);
     await expectOrganizationSchema(client);
-    await expectBookkeeping(client, "8");
+    await expectWebhookSchema(client);
+    await expectBookkeeping(client, "9");
   });
 
   test("0003-only database upgrades to the full organizational schema", async () => {
@@ -231,7 +299,8 @@ describeDb("organizations migrations (real database)", () => {
       await migrateToLatest(client);
 
       await expectOrganizationSchema(client);
-      await expectBookkeeping(client, "8");
+      await expectWebhookSchema(client);
+      await expectBookkeeping(client, "9");
     } finally {
       rmSync(tempDir, { recursive: true, force: true });
     }
@@ -243,7 +312,8 @@ describeDb("organizations migrations (real database)", () => {
     await migrateToLatest(client);
 
     await expectOrganizationSchema(client);
-    await expectBookkeeping(client, "8");
+    await expectWebhookSchema(client);
+    await expectBookkeeping(client, "9");
   });
 
   test("memberships FK to auth user and cascade on organization delete", async () => {

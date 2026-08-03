@@ -5,6 +5,7 @@ import { createInvitationRepository } from "./invitation.repository";
 import { createMembershipRepository } from "./membership.repository";
 import { createOrganizationRepository } from "./organization.repository";
 import { createOutboxRepository } from "./outbox.repository";
+import { createWebhookRepository } from "./webhook.repository";
 
 export function createUnitOfWork(db: DbOrTransaction): UnitOfWork {
   return {
@@ -15,6 +16,7 @@ export function createUnitOfWork(db: DbOrTransaction): UnitOfWork {
     memberships: createMembershipRepository(db),
     invitations: createInvitationRepository(db),
     apiKeys: createApiKeyRepository(db),
+    webhooks: createWebhookRepository(db),
     outbox: createOutboxRepository(db),
   };
 }

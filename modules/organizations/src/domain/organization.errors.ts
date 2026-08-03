@@ -109,3 +109,31 @@ export class ApiKeyNameError extends Error {
     this.name = "ApiKeyNameError";
   }
 }
+
+export class WebhookUrlError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "WebhookUrlError";
+  }
+}
+
+export class WebhookEventTypeError extends Error {
+  constructor(eventType: string) {
+    super(`Invalid webhook event type: ${eventType}`);
+    this.name = "WebhookEventTypeError";
+  }
+}
+
+export class WebhookEndpointNotFoundError extends Error {
+  constructor(organizationId: string, id: string) {
+    super(`Webhook endpoint not found: organization ${organizationId}, endpoint ${id}`);
+    this.name = "WebhookEndpointNotFoundError";
+  }
+}
+
+export class WebhookNotActiveError extends Error {
+  constructor(id: string) {
+    super(`Webhook endpoint is not active: ${id}`);
+    this.name = "WebhookNotActiveError";
+  }
+}
