@@ -1,4 +1,8 @@
-import { InvitationAlreadyUsedError, InvitationExpiredError } from "./organization.errors";
+import {
+  InvitationAlreadyUsedError,
+  InvitationEmailError,
+  InvitationExpiredError,
+} from "./organization.errors";
 import type { OrganizationRole } from "./organization-roles";
 
 export interface Invitation {
@@ -10,6 +14,12 @@ export interface Invitation {
   expiresAt: Date;
   usedAt: Date | null;
   createdAt: Date;
+}
+
+export function assertValidInvitationEmail(email: string): void {
+  if (email.trim() === "") {
+    throw new InvitationEmailError("invitation email must not be blank");
+  }
 }
 
 export function assertInvitationUsable(invitation: Invitation, now: Date): void {

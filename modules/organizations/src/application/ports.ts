@@ -60,3 +60,10 @@ export interface InvitationRepository {
   markUsed(id: string, usedAt: Date): Promise<Invitation>;
   delete(input: { organizationId: string; id: string }): Promise<void>;
 }
+
+export interface UnitOfWork {
+  run<T>(work: (uow: UnitOfWork) => Promise<T>): Promise<T>;
+  readonly organizations: OrganizationRepository;
+  readonly memberships: MembershipRepository;
+  readonly invitations: InvitationRepository;
+}

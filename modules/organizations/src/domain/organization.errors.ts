@@ -20,9 +20,23 @@ export class OrganizationSlugError extends Error {
 }
 
 export class InvalidOrganizationRoleError extends Error {
-  constructor(role: string) {
-    super(`Invalid organization role: ${role}`);
+  constructor(role: string, message?: string) {
+    super(message ?? `Invalid organization role: ${role}`);
     this.name = "InvalidOrganizationRoleError";
+  }
+}
+
+export class ForbiddenOrganizationActionError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "ForbiddenOrganizationActionError";
+  }
+}
+
+export class InvitationEmailError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "InvitationEmailError";
   }
 }
 
