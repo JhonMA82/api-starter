@@ -1,5 +1,6 @@
 import { type Auth, type AuthVariables, createAuth } from "@consulting/auth";
 import type { Config } from "@consulting/config";
+import type { MiddlewareHandler } from "hono";
 import { Hono } from "hono";
 import { bodyLimit } from "hono/body-limit";
 import { compress } from "hono/compress";
@@ -14,8 +15,9 @@ import { createRoutes, type FilesHttpOptions, type OrganizationsHttpOptions } fr
 
 /**
  * Builds the API app with the exact middleware pipeline:
- * requestId -> jsonLogger -> secureHeaders -> cors(allowlist) -> bodyLimit(1 MiB)
- * -> timeout(10 s) -> compress -> auth session -> routes -> notFound/onError.
+ * requestId -> jsonLogger -> secureHeaders -> cors(allowlist) -> bodyLimit(1 MiB,
+ * except POST /api/v1/files, which enforces its own cap) -> timeout(10 s)
+ * -> compress -> auth session -> routes -> notFound/onError.
  */
 export function createApp(
   config: Config,
@@ -40,11 +42,27 @@ export function createApp(
   const getRoles: RoleResolver = options.getRoles ?? (async () => []);
   const app = new Hono<{ Variables: AuthVariables }>();
 
+  const MAX_BODY_BYTES = 1_048_576;
+  const FILE_UPLOAD_PATH = "/api/v1/files";
+
+  /**
+   * App-wide body cap of 1 MiB, except POST /api/v1/files: multipart uploads
+   * legitimately exceed 1 MiB, so the upload route enforces its own cap
+   * (10 MiB by default in modules/files). hono's bodyLimit has no path
+   * exclusion, so the upload path skips the app-wide middleware.
+   */
+  function bodyLimitExceptUpload(maxSize: number): MiddlewareHandler {
+    return (c, next) =>
+      c.req.method === "POST" && c.req.path === FILE_UPLOAD_PATH
+        ? next()
+        : bodyLimit({ maxSize })(c, next);
+  }
+
   app.use(requestId());
   app.use(jsonLogger(config));
   app.use(secureHeaders());
   app.use(cors({ origin: config.CORS_ORIGINS }));
-  app.use(bodyLimit({ maxSize: 1_048_576 }));
+  app.use(bodyLimitExceptUpload(MAX_BODY_BYTES));
   app.use(timeout(10_000));
   app.use(compress());
   app.use("*", auth.sessionMiddleware);

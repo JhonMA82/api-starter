@@ -4,6 +4,7 @@ import type { TenantContext } from "@consulting/module-organizations";
 import { sValidator } from "@hono/standard-validator";
 import type { Context, MiddlewareHandler } from "hono";
 import { Hono } from "hono";
+import { bodyLimit } from "hono/body-limit";
 import { HTTPException } from "hono/http-exception";
 import { describeRoute, resolver } from "hono-openapi";
 import { z } from "zod";
@@ -188,9 +189,15 @@ export function createFileRoutes(deps: FileRoutesDeps): Hono<{ Variables: FileHt
           description: "File uploaded",
           content: { "application/json": { schema: resolver(UploadResponse) } },
         },
+        413: {
+          description: "Payload larger than the upload cap",
+          content: problem,
+        },
         ...tenantResponses(),
       },
     }),
+    // The app-wide bodyLimit (1 MiB) skips this route; the upload cap lives here.
+    bodyLimit({ maxSize: maxUploadBytes }),
     tenantContext,
     async (c) => {
       const user = requireUser(c);

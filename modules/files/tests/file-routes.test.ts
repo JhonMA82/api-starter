@@ -182,13 +182,46 @@ describe("POST /api/v1/files", () => {
     expect(await problem(res)).toMatchObject({ status: 400, code: "VALIDATION_FAILED" });
   });
 
-  test("rejects an oversized upload with 400", async () => {
+  test("rejects an upload over the route cap with 413 BODY_TOO_LARGE", async () => {
     const { app } = buildApp({ maxUploadBytes: 5 });
     const form = new FormData();
     form.append("file", new File(["0123456789"], "big.txt", { type: "text/plain" }));
     const res = await app.request("/api/v1/files", uploadRequest({ cookie: SESSION_COOKIE, form }));
-    expect(res.status).toBe(400);
-    expect(await problem(res)).toMatchObject({ status: 400, code: "VALIDATION_FAILED" });
+    expect(res.status).toBe(413);
+    expect(await problem(res)).toMatchObject({ status: 413, code: "BODY_TOO_LARGE" });
+  });
+
+  test("accepts uploads beyond the app-wide 1 MiB body limit up to the route cap", async () => {
+    const { app, storage } = buildApp();
+    const boundary = "----files-route-test-boundary";
+    const fileData = new Uint8Array(2 * 1024 * 1024);
+    const head =
+      `--${boundary}\r\nContent-Disposition: form-data; name="file"; filename="large.txt"\r\n` +
+      `Content-Type: text/plain;charset=utf-8\r\n\r\n`;
+    const tail = `\r\n--${boundary}--\r\n`;
+    const body = new Uint8Array(head.length + fileData.length + tail.length);
+    body.set(new TextEncoder().encode(head), 0);
+    body.set(fileData, head.length);
+    body.set(new TextEncoder().encode(tail), head.length + fileData.length);
+    const res = await app.request("/api/v1/files", {
+      method: "POST",
+      headers: {
+        ...orgHeaders({ cookie: SESSION_COOKIE }),
+        "content-type": `multipart/form-data; boundary=${boundary}`,
+        "content-length": String(body.length),
+      },
+      body,
+    });
+    expect(res.status).toBe(201);
+    const bodyJson = (await res.json()) as {
+      file: { name: string; mimeType: string; sizeBytes: number };
+    };
+    expect(bodyJson.file).toMatchObject({
+      name: "large.txt",
+      mimeType: "text/plain",
+      sizeBytes: 2 * 1024 * 1024,
+    });
+    expect(storage.entries().size).toBe(1);
   });
 
   test("maps a guard denial to 403 FORBIDDEN", async () => {
