@@ -5,6 +5,35 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.9.0] - 2026-08-03
+
+### Added
+
+- Frontend integration kits (Fase 9): framework-agnostic TypeScript SDK
+  `@consulting/sdk` with an injectable standard `fetch`, cookie/bearer auth,
+  the `x-organization-id` tenant header (per-request override), bounded RFC
+  9457 problem errors (`ApiClientError`) and typed resources for auth,
+  organizations, apiKeys, files and webhooks; no runtime dependencies.
+- TanStack Query v5 structural kit (`src/tanstack.ts`): dependency-free stable
+  query keys/options for session, organizations, organizationContext, files,
+  webhooks and apiKeys, plus mutation invalidation descriptions.
+- Next.js App Router kit (`src/next.ts`): server client with explicit cookie
+  forwarding (no `next/headers` import) and a `cache: no-store` default for
+  sensitive data, browser client with `credentials: "include"`, stable query
+  tags, no duplicate API routes and no localStorage secrets.
+- Mobile kit (`src/mobile.ts`): secure injected token store
+  (Keychain/Keystore/SecureStore), single-flight refresh, bearer client with
+  `credentials: "omit"`, idempotency keys and an upload form helper.
+- Offline kit (`src/offline.ts`): durable mutation queue (in-memory store for
+  tests), bounded exponential retry with jitter, idempotency headers, no
+  payload logging and no background timers.
+- Tauri kit (`src/tauri.ts`): credential bridge over injected `invoke`,
+  system-browser auth callback with scheme validation, and no plaintext
+  secrets or localStorage.
+- Integration examples under `integrations/` (tanstack-query,
+  next-app-router, ignite-react-native, tauri) and ADR-0011 (frontend
+  integration kits).
+
 ## [0.8.0] - 2026-08-03
 
 ### Added

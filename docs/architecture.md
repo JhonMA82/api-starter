@@ -294,6 +294,49 @@ feature flags. Ver [ADR-0010](decisions/0010-generator-profiles-features.md).
   generador no edita `bun.lock`. La integración de proveedores como S3/R2/
   MinIO o SMTP queda para el wiring de cada proyecto.
 
+## Kits de integración frontend (Fase 9)
+
+La Fase 9 entrega un **SDK TypeScript agnóstico de framework**
+(`packages/sdk`, `@consulting/sdk`) con kits de integración opcionales para
+web, móvil y desktop. La API sigue siendo la única frontera backend: las
+decisiones de seguridad viven en el servidor y el SDK solo transporta
+credenciales y cabeceras. Ver
+[ADR-0011](decisions/0011-frontend-integration-kits.md).
+
+- **Núcleo del SDK:** cliente con `fetch` estándar inyectable, auth por cookie
+  y bearer, cabecera de tenant `x-organization-id` (con override por petición),
+  respuestas JSON/204/FormData y errores problem+json acotados
+  (`ApiClientError`, RFC 9457); recursos tipados para auth, organizations,
+  apiKeys, files y webhooks. Sin dependencias de runtime: no importa React,
+  Next, TanStack, Tauri, Node ni Bun.
+- **Kit TanStack Query (`src/tanstack.ts`):** query keys, options e
+  invalidaciones estables estructuralmente compatibles con TanStack Query v5
+  (factories de session/organizations/organizationContext/files/webhooks/
+  apiKeys); los consumidores las envuelven con su `@tanstack/react-query`
+  instalado.
+- **Kit Next.js App Router (`src/next.ts`):** cliente de servidor que reenvía
+  cookies explícitamente (sin importar `next/headers`), datos sensibles con
+  `cache: no-store` por defecto (con `revalidate`/tags intencionales) y
+  cliente de navegador con `credentials: "include"` y query tags estables.
+  Sin rutas API duplicadas ni secretos en `localStorage`.
+- **Kit móvil (`src/mobile.ts`):** sesión bearer sobre un almacén seguro
+  inyectado (Keychain/Keystore/SecureStore), refresh single-flight,
+  `credentials: "omit"`, idempotency keys y helper de subida multipart.
+- **Kit offline (`src/offline.ts`):** cola durable de mutaciones (store en
+  memoria para tests), reintento exponencial acotado con jitter, cabeceras de
+  idempotencia, sin logging de payloads y sin timers en background.
+- **Kit Tauri (`src/tauri.ts`):** puente de credenciales sobre `invoke`
+  inyectado, callback de auth con el navegador del sistema y validación de
+  scheme; sin secretos en texto plano ni `localStorage`.
+- **Ejemplos:** `integrations/` contiene proyectos de ejemplo (tanstack-query,
+  next-app-router, ignite-react-native, tauri); no se añaden manifests de
+  frontend al starter.
+- **Reglas de límites:** `packages/sdk` no tiene dependencias de runtime y los
+  consumidores inyectan `fetch`, almacenes seguros y bridges; la seguridad
+  permanece en la API, nunca solo en loaders del frontend. El SDK queda fuera
+  de los perfiles de runtime del generador: los proyectos generados lo podan
+  hasta que una feature frontend futura lo seleccione.
+
 ## Perfiles y fases futuras (resumen)
 
 - **Fase 0+1 (completada):** fundación — registros, ADRs, núcleo HTTP con rutas base, OpenAPI 3.1 + Scalar, módulo de ejemplo, Docker y CI de 5 jobs.
@@ -304,7 +347,7 @@ feature flags. Ver [ADR-0010](decisions/0010-generator-profiles-features.md).
 - **Fase 6 (completada, integraciones):** outbox transaccional + eventos de dominio (migración 0005), `modules/jobs` con la JobQueue (adaptador PostgreSQL; in-memory solo para tests) + outbox worker con backoff/dead-letter/reproceso (migración 0006), API keys por organización con almacenamiento solo-hash (migración 0007), webhooks salientes firmados con HMAC (migración 0008) y webhooks entrantes verify-first con dedupe por provider+event id (migración 0009). Ver [Integraciones (Fase 6)](#integraciones-fase-6) y ADR-0008.
 - **Fase 7 (completada, archivos y notificaciones):** `modules/files` con la abstracción `FileStorage` (adaptadores en memoria y filesystem local), tabla `files` de solo referencias (migración 0010, tenant-scoped, sha256, allowlist de MIME, tope 10 MiB), URLs de descarga firmadas con HMAC (ruta pública por token) y soft-delete con `MembershipGuard` inyectado; `modules/notifications` con interfaces `Mailer`/`NotificationChannel`/`TemplateRenderer` (sin acoplamiento a proveedor), plantillas versionadas con fallback es, ledger de dedupe `sent_mails` (migración 0011) y envío asíncrono vía JobQueue. Ver [Archivos y notificaciones (Fase 7)](#archivos-y-notificaciones-fase-7) y ADR-0009.
 - **Fase 8 (completada, generador):** catálogo declarativo de features y perfiles, validación, `create:project` con poda física y cirugía del journal, `create:module` con scopes y flags, y `add:feature` con cierre de requisitos, alias, protección por marcadores y plan manual para tenancy. Ver [Generador (Fase 8)](#generador-fase-8) y ADR-0010.
-- **Fase 9 (siguiente, kits de integración frontend):** kits para TanStack, Next, Ignite, Tauri, n8n y Python.
+- **Fase 9 (completada, kits de integración frontend):** SDK TypeScript agnóstico (`packages/sdk`) con kits para TanStack Query v5, Next.js App Router, móvil (Ignite/React Native) y desktop (Tauri), cola offline con idempotencia y ejemplos en `integrations/`. Los kits n8n y Python quedan fuera del alcance de esta fase (decisión del usuario) y permanecen como trabajo futuro. Ver [Kits de integración frontend (Fase 9)](#kits-de-integración-frontend-fase-9) y ADR-0011.
 - **Perfil Docker `core`:** solo el servicio `api`. La base de datos vive en el perfil `database` (postgres) y no es un requisito del servidor HTTP.
 
 ## Modelo de datos y errores

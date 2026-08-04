@@ -1,6 +1,6 @@
 # @consulting/api-starter
 
-Plantilla reutilizable de API HTTP en **Bun 1.3.14 + Hono**, organizada como monolito modular con workspaces. Incluye validación de configuración fail-fast, modelo de errores RFC 9457, contratos OpenAPI 3.1 generados desde schemas zod, logger estructurado JSON, imagen Docker multi-stage no-root, persistencia PostgreSQL con Drizzle (Fase 2), autenticación con Better Auth (Fase 3), autorización deny-by-default y auditoría append-only (Fase 4), multi-tenancy con organizaciones, membresías e invitaciones (Fase 5), integraciones: outbox transaccional, cola de jobs, API keys y webhooks firmados (Fase 6), archivos con URLs firmadas y notificaciones por correo con plantillas (Fase 7), generador declarativo de perfiles y features (Fase 8), CI de 8 jobs y tests con umbral de cobertura.
+Plantilla reutilizable de API HTTP en **Bun 1.3.14 + Hono**, organizada como monolito modular con workspaces. Incluye validación de configuración fail-fast, modelo de errores RFC 9457, contratos OpenAPI 3.1 generados desde schemas zod, logger estructurado JSON, imagen Docker multi-stage no-root, persistencia PostgreSQL con Drizzle (Fase 2), autenticación con Better Auth (Fase 3), autorización deny-by-default y auditoría append-only (Fase 4), multi-tenancy con organizaciones, membresías e invitaciones (Fase 5), integraciones: outbox transaccional, cola de jobs, API keys y webhooks firmados (Fase 6), archivos con URLs firmadas y notificaciones por correo con plantillas (Fase 7), generador declarativo de perfiles y features (Fase 8), SDK TypeScript e kits de integración frontend: TanStack Query, Next.js, móvil y Tauri (Fase 9), CI de 8 jobs y tests con umbral de cobertura.
 
 ## Quickstart
 
@@ -197,6 +197,35 @@ Después de crear o modificar un proyecto hay que ejecutar `bun install`; el
 generador no edita `bun.lock`. El wiring de proveedores queda a cargo del
 proyecto generado, por ejemplo para S3/R2/MinIO o un transporte SMTP.
 
+### Kits de integración frontend (Fase 9)
+
+`packages/sdk` (`@consulting/sdk`) es un **SDK TypeScript agnóstico de
+framework** para consumir la API desde web, móvil y desktop, con kits de
+adaptación opcionales. La API sigue siendo la única frontera backend: las
+decisiones de seguridad viven en el servidor y el SDK solo transporta
+credenciales y cabeceras.
+
+- **Núcleo:** cliente con `fetch` estándar inyectable, auth por cookie y
+  bearer, cabecera de tenant `x-organization-id` (override por petición),
+  errores problem+json acotados (`ApiClientError`) y recursos tipados (auth,
+  organizations, apiKeys, files, webhooks). Sin dependencias de runtime.
+- **TanStack Query:** kit estructural compatible con v5 — query keys, options
+  e invalidaciones estables sin dependencias; los consumidores instalan su
+  propio `@tanstack/react-query`.
+- **Next.js App Router:** cliente de servidor que reenvía cookies
+  explícitamente y usa `cache: no-store` por defecto para datos sensibles;
+  cliente de navegador con `credentials: "include"`. Sin rutas API duplicadas
+  ni secretos en `localStorage`.
+- **Móvil y desktop:** kit móvil con almacén seguro inyectado
+  (Keychain/Keystore/SecureStore), refresh single-flight e idempotency keys;
+  cola offline durable con reintento acotado y jitter; kit Tauri con puente de
+  credenciales sobre `invoke` y callback de auth por navegador de sistema.
+- **Ejemplos:** proyectos de integración en `integrations/` (tanstack-query,
+  next-app-router, ignite-react-native, tauri).
+- El SDK queda fuera de los perfiles de runtime del generador: los proyectos
+  backend generados lo podan salvo que una feature frontend futura lo
+  seleccione. Los kits n8n y Python permanecen fuera del alcance de esta fase.
+
 ### Desarrollo
 
 ```bash
@@ -293,8 +322,9 @@ api/
 ├─ bunfig.toml             umbral de cobertura 0.8
 ├─ catalog/dependencies.json   registro de dependencias (versión, licencia, propósito)
 ├─ generator/              catálogo, manifiestos, plantillas, CLI y tests (Fase 8)
+├─ integrations/           ejemplos de integración frontend: TanStack Query, Next, móvil y Tauri (Fase 9)
 ├─ docs/architecture.md    visión, capas, matriz de portabilidad (español)
-├─ docs/decisions/         ADR 0001–0010 (inglés)
+├─ docs/decisions/         ADR 0001–0011 (inglés)
 ├─ docs/migrations-runbook.md   runbook de migraciones (español)
 ├─ migrations/             migraciones SQL commitadas + snapshots (drizzle-kit)
 ├─ scripts/db/             runners de migración y seeds (db:migrate, db:seed)
@@ -306,6 +336,7 @@ api/
 ├─ packages/auth-client/   cliente browser-safe de Better Auth (sin Hono ni Bun)
 ├─ packages/authorization/ catálogo de permisos, roles y políticas ABAC (deny by default)
 ├─ packages/audit/         log de auditoría append-only (tabla + trigger + API record/list)
+├─ packages/sdk/           SDK TypeScript agnóstico + kits TanStack Query, Next, móvil y Tauri (Fase 9)
 └─ modules/
    ├─ example/             módulo de ejemplo por capas (domain/application/http)
    ├─ files/               archivos como referencias: FileStorage + tabla files + URLs firmadas (Fase 7)
