@@ -109,7 +109,7 @@ describe("planProject", () => {
     expect(plan.removeFiles).toEqual(["apps/api/src/http/authorization.ts", "scripts/db"]);
   });
 
-  test("multi-tenant keeps every module, package, and migration", () => {
+  test("multi-tenant keeps every runtime module and package", () => {
     const plan = planProject("multi-tenant");
     expect(plan.keepModules).toContain("organizations");
     expect(plan.keepModules).toContain("notes");
@@ -118,7 +118,7 @@ describe("planProject", () => {
     expect(plan.keepPackages).toContain("auth");
     expect(plan.keepPackages).toContain("authorization");
     expect(plan.keepPackages).toContain("audit");
-    expect(plan.removePackages).toEqual([]);
+    expect(plan.removePackages).toEqual(["sdk"]);
     expect(plan.keepMigrations).toEqual([...ALL_MIGRATIONS].sort());
     expect(plan.removeMigrations).toEqual([]);
     expect(plan.removeFiles).toEqual([]);

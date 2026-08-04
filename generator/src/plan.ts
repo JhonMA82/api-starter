@@ -25,6 +25,7 @@ export const ALL_PACKAGES = [
   "config",
   "contracts",
   "core",
+  "sdk",
 ] as const;
 
 export const ALL_MIGRATIONS = [
