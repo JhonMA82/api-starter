@@ -8,6 +8,13 @@ import {
   VersionResponse,
 } from "@consulting/contracts";
 import { exampleRoutes } from "@consulting/module-example";
+import {
+  createFileRoutes,
+  type FileHashing,
+  type FileRepository,
+  type FileStorage,
+  type MembershipGuard,
+} from "@consulting/module-files";
 import type { JobQueue } from "@consulting/module-organizations";
 import {
   type ApiKeyRepository,
@@ -16,6 +23,7 @@ import {
   createOrganizationRoutes,
   createReceiveIncomingWebhookUseCase,
   createTenancyService,
+  createTenantContextMiddleware,
   type IncomingWebhookRepository,
   type InvitationRepository,
   type MembershipRepository,
@@ -70,9 +78,38 @@ export interface OrganizationsHttpOptions {
   };
 }
 
+/**
+ * Files HTTP wiring (spec §15). Requires the organizations wiring: the
+ * MembershipGuard and the tenant middleware are built from the organizations
+ * tenancy service (assertCanManage = resolveTenantContext). When absent the
+ * /api/v1/files* routes are NOT mounted (hermetic default).
+ */
+export interface FilesHttpOptions {
+  files: FileRepository;
+  storage: FileStorage;
+  hash: FileHashing;
+  /** HMAC secret for signed download tokens. */
+  signedUrlSecret: string;
+  /** Public API origin used to build download links. */
+  baseUrl: string;
+  /** Upload size cap in bytes; defaults to MAX_FILE_SIZE_BYTES (10 MiB). */
+  maxUploadBytes?: number;
+  /**
+   * Optional overrides for hermetic tests. Defaults: a guard that asserts via
+   * the organizations tenancy (resolveTenantContext) and the real tenant
+   * context middleware built from the same tenancy service.
+   */
+  guard?: MembershipGuard;
+  tenantContext?: ReturnType<typeof createTenantContextMiddleware>;
+}
+
 export function createRoutes(
   config: Config,
-  options: { getRoles?: RoleResolver; organizations?: OrganizationsHttpOptions } = {},
+  options: {
+    getRoles?: RoleResolver;
+    organizations?: OrganizationsHttpOptions;
+    files?: FilesHttpOptions;
+  } = {},
 ): Hono<{ Variables: AuthVariables }> {
   const getRoles = options.getRoles ?? (async () => []);
   const app = new Hono<{ Variables: AuthVariables }>();
@@ -158,6 +195,35 @@ export function createRoutes(
       }),
     });
     app.route("/api/v1", incomingWebhookRoutes);
+  }
+
+  // Files mount with the guard built from the organizations tenancy; the
+  // public download route (HMAC-signed token) is part of the same router.
+  if (options.files !== undefined) {
+    if (options.organizations === undefined) {
+      throw new Error("files routes require the organizations wiring");
+    }
+    const tenancy = createTenancyService(options.organizations.repositories);
+    const guard: MembershipGuard =
+      options.files.guard ??
+      ({
+        assertCanManage: async (actorUserId: string, organizationId: string) => {
+          await tenancy.resolveTenantContext({ organizationId, userId: actorUserId });
+        },
+      } satisfies MembershipGuard);
+    const fileRoutes = createFileRoutes({
+      guard,
+      files: options.files.files,
+      storage: options.files.storage,
+      hash: options.files.hash,
+      signedUrlSecret: options.files.signedUrlSecret,
+      baseUrl: options.files.baseUrl,
+      ...(options.files.maxUploadBytes === undefined
+        ? {}
+        : { maxUploadBytes: options.files.maxUploadBytes }),
+      tenantContext: options.files.tenantContext ?? createTenantContextMiddleware({ tenancy }),
+    });
+    app.route("/api/v1", fileRoutes);
   }
 
   app.get(

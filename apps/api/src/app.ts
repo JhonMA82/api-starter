@@ -10,7 +10,7 @@ import { timeout } from "hono/timeout";
 import type { RoleResolver } from "./http/authorization";
 import { notFound, onError } from "./http/errors";
 import { jsonLogger } from "./http/logger";
-import { createRoutes, type OrganizationsHttpOptions } from "./routes";
+import { createRoutes, type FilesHttpOptions, type OrganizationsHttpOptions } from "./routes";
 
 /**
  * Builds the API app with the exact middleware pipeline:
@@ -23,6 +23,7 @@ export function createApp(
     auth?: Auth;
     getRoles?: RoleResolver;
     organizations?: OrganizationsHttpOptions;
+    files?: FilesHttpOptions;
   } = {},
 ): Hono<{
   Variables: AuthVariables;
@@ -52,12 +53,11 @@ export function createApp(
 
   app.route(
     "/",
-    createRoutes(
-      config,
-      options.organizations === undefined
-        ? { getRoles }
-        : { getRoles, organizations: options.organizations },
-    ),
+    createRoutes(config, {
+      getRoles,
+      ...(options.organizations === undefined ? {} : { organizations: options.organizations }),
+      ...(options.files === undefined ? {} : { files: options.files }),
+    }),
   );
 
   app.notFound(notFound);

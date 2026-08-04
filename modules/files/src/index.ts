@@ -16,9 +16,20 @@ export type {
   FileStorage,
   MembershipGuard,
 } from "./application/ports";
+export {
+  buildSignedDownloadUrl,
+  createSignedDownloadToken,
+  decodeSignedDownloadToken,
+  type SignedUrlClaims,
+  type SignedUrlInput,
+  verifySignedDownloadToken,
+} from "./application/signed-url";
 export type { UploadFileDeps, UploadFileInput, UploadFileUseCase } from "./application/upload-file";
 export { createUploadFileUseCase } from "./application/upload-file";
-export type { AllowedMimeType, StoredFile } from "./domain/file.entity";
+export type {
+  AllowedMimeType,
+  StoredFile,
+} from "./domain/file.entity";
 export {
   ALLOWED_MIME_TYPES,
   assertAllowedMimeType,
@@ -34,6 +45,21 @@ export {
   InvalidFileNameError,
   UnsupportedMimeTypeError,
 } from "./domain/file.errors";
+export { toFileHttpException } from "./http/errors";
+export {
+  createFileRoutes,
+  DEFAULT_EXPIRY_SECONDS,
+  type FileHttpVariables,
+  type FileRoutesDeps,
+  MAX_EXPIRY_SECONDS,
+} from "./http/file.routes";
+export {
+  DownloadUrlResponse,
+  FileResponse,
+  FileWithDownloadUrlResponse,
+  ListResponse,
+  UploadResponse,
+} from "./http/schemas";
 export {
   createClient,
   createDb,
