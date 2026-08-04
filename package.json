@@ -15,6 +15,7 @@
     "typecheck": "bun x tsc --noEmit",
     "test": "bun test",
     "test:coverage": "bun test --coverage",
+    "load-test": "bun scripts/load-test.ts",
     "db:generate": "bun x drizzle-kit generate < /dev/null",
     "db:migrate": "bun scripts/db/migrate.ts",
     "db:seed": "bun scripts/db/seed.ts",
