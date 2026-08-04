@@ -171,7 +171,7 @@ describeDb("auth migrations (real database)", () => {
       "webhook_endpoints",
     ]);
     await expectAuthSchema(client);
-    await expectBookkeeping(client, "11");
+    await expectBookkeeping(client, "12");
   });
 
   test("0001 to 0002 preserves notes rows and adds the auth schema", async () => {
@@ -210,7 +210,7 @@ describeDb("auth migrations (real database)", () => {
         { title: "upgrade-c", pinned: false },
       ]);
       await expectAuthSchema(client);
-      await expectBookkeeping(client, "11");
+      await expectBookkeeping(client, "12");
     } finally {
       rmSync(tempDir, { recursive: true, force: true });
     }
@@ -222,6 +222,6 @@ describeDb("auth migrations (real database)", () => {
     await migrateToLatest(client);
 
     await expectAuthSchema(client);
-    await expectBookkeeping(client, "11");
+    await expectBookkeeping(client, "12");
   });
 });

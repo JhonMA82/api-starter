@@ -133,7 +133,7 @@ describeDb("audit migrations (real database)", () => {
       "webhook_endpoints",
     ]);
     await expectAuditSchema(client);
-    await expectBookkeeping(client, "11");
+    await expectBookkeeping(client, "12");
   });
 
   test("0002-only database upgrades to the full schema", async () => {
@@ -173,7 +173,7 @@ describeDb("audit migrations (real database)", () => {
       await migrateToLatest(client);
 
       await expectAuditSchema(client);
-      await expectBookkeeping(client, "11");
+      await expectBookkeeping(client, "12");
     } finally {
       rmSync(tempDir, { recursive: true, force: true });
     }
@@ -185,6 +185,6 @@ describeDb("audit migrations (real database)", () => {
     await migrateToLatest(client);
 
     await expectAuditSchema(client);
-    await expectBookkeeping(client, "11");
+    await expectBookkeeping(client, "12");
   });
 });

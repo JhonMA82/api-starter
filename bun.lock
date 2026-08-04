@@ -82,6 +82,15 @@
         "postgres": "3.4.9",
       },
     },
+    "modules/notifications": {
+      "name": "@consulting/module-notifications",
+      "version": "0.1.0",
+      "dependencies": {
+        "@consulting/module-jobs": "workspace:*",
+        "drizzle-orm": "0.45.2",
+        "postgres": "3.4.9",
+      },
+    },
     "modules/organizations": {
       "name": "@consulting/module-organizations",
       "version": "0.1.0",
@@ -208,6 +217,8 @@
     "@consulting/module-jobs": ["@consulting/module-jobs@workspace:modules/jobs"],
 
     "@consulting/module-notes": ["@consulting/module-notes@workspace:modules/notes"],
+
+    "@consulting/module-notifications": ["@consulting/module-notifications@workspace:modules/notifications"],
 
     "@consulting/module-organizations": ["@consulting/module-organizations@workspace:modules/organizations"],
 

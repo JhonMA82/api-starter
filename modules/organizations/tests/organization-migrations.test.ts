@@ -43,6 +43,7 @@ const PUBLIC_TABLES = [
   "notes",
   "organizations",
   "outbox_events",
+  "sent_mails",
   "session",
   "user",
   "verification",
@@ -307,7 +308,7 @@ describeDb("organizations migrations (real database)", () => {
     await expectOrganizationSchema(client);
     await expectWebhookSchema(client);
     await expectIncomingWebhookSchema(client);
-    await expectBookkeeping(client, "11");
+    await expectBookkeeping(client, "12");
   });
 
   test("0003-only database upgrades to the full organizational schema", async () => {
@@ -350,7 +351,7 @@ describeDb("organizations migrations (real database)", () => {
       await expectOrganizationSchema(client);
       await expectWebhookSchema(client);
       await expectIncomingWebhookSchema(client);
-      await expectBookkeeping(client, "11");
+      await expectBookkeeping(client, "12");
     } finally {
       rmSync(tempDir, { recursive: true, force: true });
     }
@@ -364,7 +365,7 @@ describeDb("organizations migrations (real database)", () => {
     await expectOrganizationSchema(client);
     await expectWebhookSchema(client);
     await expectIncomingWebhookSchema(client);
-    await expectBookkeeping(client, "11");
+    await expectBookkeeping(client, "12");
   });
 
   test("memberships FK to auth user and cascade on organization delete", async () => {

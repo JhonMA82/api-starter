@@ -45,6 +45,7 @@ const PUBLIC_TABLES = [
   "notes",
   "organizations",
   "outbox_events",
+  "sent_mails",
   "session",
   "user",
   "verification",
@@ -139,7 +140,7 @@ describeDb("outbox migrations (real database)", () => {
     `);
     expect(publicTables.map((row) => row.table_name)).toEqual(PUBLIC_TABLES);
     await expectOutboxSchema(client);
-    await expectBookkeeping(client, "11");
+    await expectBookkeeping(client, "12");
   });
 
   test("0004-only database upgrades to include outbox_events", async () => {
@@ -193,7 +194,7 @@ describeDb("outbox migrations (real database)", () => {
       );
       expect(after.map((row) => row.table_name)).toEqual(PUBLIC_TABLES);
       await expectOutboxSchema(client);
-      await expectBookkeeping(client, "11");
+      await expectBookkeeping(client, "12");
     } finally {
       rmSync(tempDir, { recursive: true, force: true });
     }
@@ -205,6 +206,6 @@ describeDb("outbox migrations (real database)", () => {
     await migrateToLatest(client);
 
     await expectOutboxSchema(client);
-    await expectBookkeeping(client, "11");
+    await expectBookkeeping(client, "12");
   });
 });

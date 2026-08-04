@@ -78,6 +78,13 @@
       "when": 1785801815185,
       "tag": "0010_rainy_anthem",
       "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1785803992770,
+      "tag": "0011_remarkable_yellowjacket",
+      "breakpoints": true
     }
   ]
 }
