@@ -18,6 +18,7 @@ import {
   computeRemoveList,
   rewriteAppPackageJson,
   rewriteConfigEnv,
+  rewriteDockerCompose,
   rewriteDrizzleConfig,
   rewriteEnvExample,
   rewriteRootPackageJson,
@@ -126,6 +127,7 @@ export function generateProject(
     rewriteConfigEnv(source, plan),
   );
   rewrite(path.join(outPath, "tsconfig.json"), (source) => rewriteTsconfig(source, plan));
+  rewrite(path.join(outPath, "docker-compose.yml"), (source) => rewriteDockerCompose(source, plan));
 
   const selection = selectTemplates(plan);
   const templatesDir = path.join(repoRoot, "generator", "templates", "app");

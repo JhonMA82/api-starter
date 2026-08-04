@@ -5,6 +5,28 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+
+- Hardening (Fase 10, WU4): Dockerfile multi-stage que instala el workspace
+  completo con `--frozen-lockfile` (todos los manifests de apps/packages/
+  modules), labels OCI versionables por build (`IMAGE_VERSION`, default
+  0.10.0, y `IMAGE_SOURCE`), `STOPSIGNAL SIGTERM` y `APP_VERSION` desde el
+  build; `.dockerignore` endurecido (dumps, tooling local y coverage fuera
+  del contexto).
+- docker-compose: perfil `worker` con el nuevo `scripts/worker.ts` (poll del
+  outbox con fan-out de webhooks y shutdown graceful sobre SIGTERM/SIGINT);
+  documentado por qué los perfiles redis/storage/observability se omiten a
+  propósito (spec §23.2, sin servicios inexistentes) y sus puntos de
+  extensión (ADR-0008/ADR-0009).
+- Backup/restore probados (control §20.2): `scripts/db/backup.ts` (pg_dump
+  custom, contraseña solo por `PGPASSWORD`, logs enmascarados),
+  `scripts/db/restore.ts` (`--file` + `--force` destructivo, `pg_restore
+  --clean --if-exists` para custom y `psql` para plain), tests reales
+  backup→validate→restore en DB scratch cuando las herramientas existen, y
+  runbook `docs/backup-restore.md` (rotación, drill de verificación, RPO/RTO).
+
 ## [0.9.0] - 2026-08-03
 
 ### Added

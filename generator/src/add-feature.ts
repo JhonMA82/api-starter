@@ -18,6 +18,7 @@ import { getProfile } from "./profiles";
 import {
   rewriteAppPackageJson,
   rewriteConfigEnv,
+  rewriteDockerCompose,
   rewriteDrizzleConfig,
   rewriteEnvExample,
   rewriteRootPackageJson,
@@ -452,6 +453,17 @@ export function copyFeatureResources(
   if (featureIds.map(normalizeFeatureId).includes("persistence")) {
     addTreeCopyOperations(operations, source, project, "scripts/db", force);
   }
+  if (featureIds.map(normalizeFeatureId).includes("tenancy")) {
+    // Standalone outbox worker (compose profile `worker`): its entrypoint is
+    // tenancy-owned tooling, pruned from projects without organizations.
+    addCopyOperation(
+      operations,
+      path.join(source, "scripts", "worker.ts"),
+      path.join(project, "scripts", "worker.ts"),
+      "scripts/worker.ts",
+      force,
+    );
+  }
 
   const currentMigrations = new Set(currentPlan.keepMigrations);
   for (const migration of plan.keepMigrations) {
@@ -531,6 +543,10 @@ export function copyFeatureResources(
     {
       relative: "packages/config/src/env.ts",
       rewrite: rewriteConfigEnv,
+    },
+    {
+      relative: "docker-compose.yml",
+      rewrite: rewriteDockerCompose,
     },
   ] as const;
   for (const input of rewriteInputs) {

@@ -106,7 +106,11 @@ describe("planProject", () => {
     expect(plan.keepEnvVars).toContain("PORT");
     expect(plan.keepEnvVars).not.toContain("DATABASE_URL");
     expect(plan.keepEnvVars).not.toContain("BETTER_AUTH_SECRET");
-    expect(plan.removeFiles).toEqual(["apps/api/src/http/authorization.ts", "scripts/db"]);
+    expect(plan.removeFiles).toEqual([
+      "apps/api/src/http/authorization.ts",
+      "scripts/db",
+      "scripts/worker.ts",
+    ]);
   });
 
   test("multi-tenant keeps every runtime module and package", () => {

@@ -46,6 +46,9 @@ Convenciones del repositorio para agentes de IA y colaboradores humanos.
 | `bun run db:migrate` | aplicar migraciones pendientes (idempotente) |
 | `bun run db:generate` | regenerar migraciones desde los schemas (gate de drift en CI) |
 | `bun run db:seed` | datos semilla (idempotente) |
+| `bun run db:backup` | volcado pg_dump custom a `backups/` (runbook: docs/backup-restore.md) |
+| `bun run db:restore` | restaurar un volcado (`--file` + `--force` obligatorio; destructivo) |
+| `bun run worker` | worker standalone del outbox (perfil compose `worker`) |
 | `DATABASE_URL=... bun test --parallel=1` | tests de DB reales, serializados (CP-C) |
 
 ## Qué no editar

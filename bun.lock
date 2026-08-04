@@ -6,6 +6,7 @@
       "name": "@consulting/api-starter",
       "dependencies": {
         "@consulting/module-notes": "workspace:*",
+        "@consulting/module-organizations": "workspace:*",
         "drizzle-orm": "0.45.2",
       },
       "devDependencies": {

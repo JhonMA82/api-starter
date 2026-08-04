@@ -1,6 +1,16 @@
+# Build context exclusions (spec §23.1: minimal image, secrets outside image).
 node_modules
 .env*
 docs
 catalog
 .github
 tests
+.git
+# Local tooling and artifacts never needed in the image.
+.atl
+.codegraph
+coverage
+generator
+integrations
+# Database dumps are secrets — never part of the build context.
+backups

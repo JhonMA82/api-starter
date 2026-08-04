@@ -233,3 +233,32 @@ export function rewriteConfigEnv(source: string, plan: ProjectPlan): string {
 export function rewriteTsconfig(source: string, _plan: ProjectPlan): string {
   return source;
 }
+
+/**
+ * Drops the `worker` compose service when tenancy is out: its entrypoint
+ * (scripts/worker.ts) is physically removed, so the service declaration
+ * would dangle (spec §23.2: no declarar dependencias de servicios
+ * inexistentes). Line-based: the worker block ends at the next service key,
+ * the volumes: block, or EOF.
+ */
+export function rewriteDockerCompose(source: string, plan: ProjectPlan): string {
+  if (plan.keepModules.includes("organizations")) {
+    return source;
+  }
+  const lines = source.split("\n");
+  const result: string[] = [];
+  let inWorkerBlock = false;
+  for (const line of lines) {
+    if (/^ {2}worker:$/.test(line)) {
+      inWorkerBlock = true;
+      continue;
+    }
+    if (inWorkerBlock && /^( {2}[a-z][a-z0-9-]*:$|volumes:|services:|$)/.test(line)) {
+      inWorkerBlock = false;
+    }
+    if (!inWorkerBlock) {
+      result.push(line);
+    }
+  }
+  return result.join("\n");
+}

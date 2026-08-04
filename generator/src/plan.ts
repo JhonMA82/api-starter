@@ -231,6 +231,11 @@ function buildProjectPlan(profileId: string, features: readonly string[]): Proje
     // drizzle — persistence-owned tooling.
     removeFiles.push("scripts/db");
   }
+  if (!featureSet.has("tenancy")) {
+    // scripts/worker.ts (standalone outbox worker) imports
+    // @consulting/module-organizations — tenancy-owned tooling.
+    removeFiles.push("scripts/worker.ts");
+  }
   if (!featureSet.has("authorization")) {
     // apps/api/src/http/authorization.ts imports @consulting/auth and
     // @consulting/authorization; it only feeds requirePermission demo routes.

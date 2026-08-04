@@ -1,9 +1,31 @@
+# Perfiles compose (spec §23.2): core / database / worker son los servicios
+# implementados hoy.
+#
+# redis, storage y observability están AUSENTES a propósito: no existen esos
+# servicios en el starter y el spec prohíbe declarar dependencias de
+# servicios inexistentes. Puntos de extensión documentados:
+#   - redis: adaptador de jobs sobre Redis/BullMQ cuando Redis entre al
+#     stack (ADR-0008 §14.4; hoy JobQueue es PostgreSQL).
+#   - storage: object store S3/MinIO para files (ADR-0009 §15; hoy los
+#     archivos son referencias en la DB y no se sirven desde la API).
+#   - observability: collector OTLP para métricas/traces (spec §22; hoy los
+#     contratos MetricsRegistry/Tracer viven en packages/core).
 services:
   api:
     build: .
     profiles: ["core"]
     ports:
       - "${PORT:-3000}:3000"
+    env_file: .env
+    init: true
+    restart: unless-stopped
+  worker:
+    build: .
+    profiles: ["worker"]
+    # entrypoint override: la imagen arranca el API por defecto; el perfil
+    # worker corre el poll loop del outbox (scripts/worker.ts) con shutdown
+    # graceful (SIGTERM/SIGINT -> stop del poll, cierre del cliente de DB).
+    entrypoint: ["bun", "run", "scripts/worker.ts"]
     env_file: .env
     init: true
     restart: unless-stopped
