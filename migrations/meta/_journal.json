@@ -71,6 +71,13 @@
       "when": 1785780789549,
       "tag": "0009_boring_bloodscream",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1785801815185,
+      "tag": "0010_rainy_anthem",
+      "breakpoints": true
     }
   ]
 }

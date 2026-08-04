@@ -37,6 +37,7 @@ const PUBLIC_TABLES = [
   "account",
   "api_keys",
   "audit_log",
+  "files",
   "incoming_webhooks",
   "invitations",
   "jobs",
@@ -126,7 +127,7 @@ describeDb("outbox migrations (real database)", () => {
     await closeClient(client);
   });
 
-  test("from zero creates 15 public tables including outbox_events and Drizzle bookkeeping", async () => {
+  test("from zero creates 16 public tables including outbox_events and Drizzle bookkeeping", async () => {
     await resetDatabase(client);
     await migrateToLatest(client);
 
@@ -138,7 +139,7 @@ describeDb("outbox migrations (real database)", () => {
     `);
     expect(publicTables.map((row) => row.table_name)).toEqual(PUBLIC_TABLES);
     await expectOutboxSchema(client);
-    await expectBookkeeping(client, "10");
+    await expectBookkeeping(client, "11");
   });
 
   test("0004-only database upgrades to include outbox_events", async () => {
@@ -192,7 +193,7 @@ describeDb("outbox migrations (real database)", () => {
       );
       expect(after.map((row) => row.table_name)).toEqual(PUBLIC_TABLES);
       await expectOutboxSchema(client);
-      await expectBookkeeping(client, "10");
+      await expectBookkeeping(client, "11");
     } finally {
       rmSync(tempDir, { recursive: true, force: true });
     }
@@ -204,6 +205,6 @@ describeDb("outbox migrations (real database)", () => {
     await migrateToLatest(client);
 
     await expectOutboxSchema(client);
-    await expectBookkeeping(client, "10");
+    await expectBookkeeping(client, "11");
   });
 });

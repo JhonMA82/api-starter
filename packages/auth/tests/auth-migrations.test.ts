@@ -141,7 +141,7 @@ describeDb("auth migrations (real database)", () => {
     await closeClient(client);
   });
 
-  test("from zero creates 15 public tables and Drizzle bookkeeping", async () => {
+  test("from zero creates 16 public tables and Drizzle bookkeeping", async () => {
     await resetDatabase(client);
     await migrateToLatest(client);
 
@@ -151,11 +151,12 @@ describeDb("auth migrations (real database)", () => {
       WHERE table_schema = 'public' AND table_type = 'BASE TABLE'
       ORDER BY table_name
     `);
-    // 15 public tables plus drizzle.__drizzle_migrations bookkeeping.
+    // 16 public tables plus drizzle.__drizzle_migrations bookkeeping.
     expect(publicTables.map((row) => row.table_name)).toEqual([
       "account",
       "api_keys",
       "audit_log",
+      "files",
       "incoming_webhooks",
       "invitations",
       "jobs",
@@ -170,7 +171,7 @@ describeDb("auth migrations (real database)", () => {
       "webhook_endpoints",
     ]);
     await expectAuthSchema(client);
-    await expectBookkeeping(client, "10");
+    await expectBookkeeping(client, "11");
   });
 
   test("0001 to 0002 preserves notes rows and adds the auth schema", async () => {
@@ -209,7 +210,7 @@ describeDb("auth migrations (real database)", () => {
         { title: "upgrade-c", pinned: false },
       ]);
       await expectAuthSchema(client);
-      await expectBookkeeping(client, "10");
+      await expectBookkeeping(client, "11");
     } finally {
       rmSync(tempDir, { recursive: true, force: true });
     }
@@ -221,6 +222,6 @@ describeDb("auth migrations (real database)", () => {
     await migrateToLatest(client);
 
     await expectAuthSchema(client);
-    await expectBookkeeping(client, "10");
+    await expectBookkeeping(client, "11");
   });
 });

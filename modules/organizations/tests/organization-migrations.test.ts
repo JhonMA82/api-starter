@@ -35,6 +35,7 @@ const PUBLIC_TABLES = [
   "account",
   "api_keys",
   "audit_log",
+  "files",
   "incoming_webhooks",
   "invitations",
   "jobs",
@@ -292,7 +293,7 @@ describeDb("organizations migrations (real database)", () => {
     await closeClient(client);
   });
 
-  test("from zero creates 15 public tables and Drizzle bookkeeping", async () => {
+  test("from zero creates 16 public tables and Drizzle bookkeeping", async () => {
     await resetDatabase(client);
     await migrateToLatest(client);
 
@@ -306,7 +307,7 @@ describeDb("organizations migrations (real database)", () => {
     await expectOrganizationSchema(client);
     await expectWebhookSchema(client);
     await expectIncomingWebhookSchema(client);
-    await expectBookkeeping(client, "10");
+    await expectBookkeeping(client, "11");
   });
 
   test("0003-only database upgrades to the full organizational schema", async () => {
@@ -349,7 +350,7 @@ describeDb("organizations migrations (real database)", () => {
       await expectOrganizationSchema(client);
       await expectWebhookSchema(client);
       await expectIncomingWebhookSchema(client);
-      await expectBookkeeping(client, "10");
+      await expectBookkeeping(client, "11");
     } finally {
       rmSync(tempDir, { recursive: true, force: true });
     }
@@ -363,7 +364,7 @@ describeDb("organizations migrations (real database)", () => {
     await expectOrganizationSchema(client);
     await expectWebhookSchema(client);
     await expectIncomingWebhookSchema(client);
-    await expectBookkeeping(client, "10");
+    await expectBookkeeping(client, "11");
   });
 
   test("memberships FK to auth user and cascade on organization delete", async () => {

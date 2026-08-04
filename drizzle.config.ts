@@ -12,6 +12,7 @@ export default defineConfig({
     "./modules/organizations/src/infrastructure/webhook.schema.ts",
     "./modules/organizations/src/infrastructure/incoming-webhook.schema.ts",
     "./modules/jobs/src/infrastructure/job.schema.ts",
+    "./modules/files/src/infrastructure/file.schema.ts",
   ],
   out: "./migrations",
   strict: true,
