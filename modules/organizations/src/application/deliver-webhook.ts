@@ -1,3 +1,4 @@
+import type { MetricsRegistry } from "@consulting/core";
 import type { DomainEvent } from "../domain/domain-events";
 import { WebhookNotActiveError } from "../domain/organization.errors";
 import {
@@ -23,6 +24,13 @@ export interface WebhookDelivererDeps {
   webhooks: WebhookRepository;
   now?: () => Date;
   deliver: (input: WebhookDeliverInput) => Promise<WebhookDeliverResult>;
+  /**
+   * Optional metrics counters (spec §22.2). Absent -> behavior unchanged.
+   * Counters: webhook_deliveries_total, webhook_deliveries_succeeded_total,
+   * webhook_deliveries_failed_total. No labels — per §22.1 redaction, ids
+   * and secrets never appear in metric labels.
+   */
+  metrics?: Pick<MetricsRegistry, "incrementCounter">;
 }
 
 export const WEBHOOK_BACKOFF_BASE_MS = 1_000;
@@ -90,6 +98,8 @@ export function createWebhookDeliverer(deps: WebhookDelivererDeps) {
         payload,
       });
 
+      deps.metrics?.incrementCounter("webhook_deliveries_total");
+
       const headers = buildWebhookHeaders({
         secret: endpoint.secret,
         timestamp: Math.floor(now.getTime() / 1_000),
@@ -105,8 +115,10 @@ export function createWebhookDeliverer(deps: WebhookDelivererDeps) {
           headers,
         });
         if (result.status >= 200 && result.status < 300) {
+          deps.metrics?.incrementCounter("webhook_deliveries_succeeded_total");
           return deps.webhooks.markDeliverySucceeded(delivery.id, result.status);
         }
+        deps.metrics?.incrementCounter("webhook_deliveries_failed_total");
         return deps.webhooks.markDeliveryFailed(
           delivery.id,
           `webhook endpoint returned HTTP ${result.status}`,
@@ -114,6 +126,7 @@ export function createWebhookDeliverer(deps: WebhookDelivererDeps) {
           computeWebhookNextAttemptAt(delivery.attempts, now),
         );
       } catch (error) {
+        deps.metrics?.incrementCounter("webhook_deliveries_failed_total");
         const message = error instanceof Error ? error.message : String(error);
         return deps.webhooks.markDeliveryFailed(
           delivery.id,

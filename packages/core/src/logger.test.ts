@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import type { LogEntry } from "./logger";
-import { levelFromStatus, serializeLog } from "./logger";
+import { levelFromStatus, pseudonymizeId, serializeLog } from "./logger";
 
 const sampleEntry: LogEntry = {
   timestamp: "2026-08-02T20:00:00.000Z",
@@ -28,6 +28,20 @@ describe("levelFromStatus", () => {
   test("derives error for 5xx", () => {
     expect(levelFromStatus(500)).toBe("error");
     expect(levelFromStatus(503)).toBe("error");
+  });
+});
+
+describe("pseudonymizeId", () => {
+  test("returns a stable 12-char sha256 hex prefix per input", () => {
+    const first = pseudonymizeId("user-123");
+    expect(first).toMatch(/^[0-9a-f]{12}$/);
+    expect(pseudonymizeId("user-123")).toBe(first);
+    expect(pseudonymizeId("user-123")).not.toBe(pseudonymizeId("user-124"));
+  });
+
+  test("returns undefined for empty or missing input", () => {
+    expect(pseudonymizeId("")).toBeUndefined();
+    expect(pseudonymizeId(undefined)).toBeUndefined();
   });
 });
 

@@ -488,6 +488,25 @@ describe("createWebhookDeliverer", () => {
     return { repos, deliverer, delivered };
   }
 
+  function setupWithMetrics(
+    deliver: (input: DeliverCall) => Promise<{ status: number }> | { status: number },
+  ) {
+    const counters: Record<string, number> = {};
+    const metrics = {
+      incrementCounter: (name: string, value = 1) => {
+        counters[name] = (counters[name] ?? 0) + value;
+      },
+    };
+    const repos = createFakeRepositories();
+    const deliverer = createWebhookDeliverer({
+      webhooks: repos.webhooks,
+      now: () => FIXED_NOW,
+      deliver: async (input) => deliver(input),
+      metrics,
+    });
+    return { repos, deliverer, counters };
+  }
+
   const endpoint = makeWebhookEndpoint({ secret: "signing-secret" });
   const event = makeEvent({
     payload: { apiKey: "ak_123", name: "Acme Inc" },
@@ -567,6 +586,30 @@ describe("createWebhookDeliverer", () => {
     });
     await expect(deliverer.deliverWebhook(endpoint, event)).resolves.toMatchObject({
       status: "failed",
+    });
+  });
+
+  test("2xx increments webhook delivery success counters when metrics are provided", async () => {
+    const { deliverer, counters } = setupWithMetrics(() => ({ status: 200 }));
+
+    const result = await deliverer.deliverWebhook(endpoint, event);
+
+    expect(result.status).toBe("succeeded");
+    expect(counters).toEqual({
+      webhook_deliveries_total: 1,
+      webhook_deliveries_succeeded_total: 1,
+    });
+  });
+
+  test("HTTP failure increments webhook delivery failure counters", async () => {
+    const { deliverer, counters } = setupWithMetrics(() => ({ status: 500 }));
+
+    const result = await deliverer.deliverWebhook(endpoint, event);
+
+    expect(result.status).toBe("failed");
+    expect(counters).toEqual({
+      webhook_deliveries_total: 1,
+      webhook_deliveries_failed_total: 1,
     });
   });
 

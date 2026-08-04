@@ -68,6 +68,7 @@ export const ALL_APP_TESTS = [
   "authorization.test.ts",
   "boundary.test.ts",
   "files-routes-db.test.ts",
+  "metrics.test.ts",
   "openapi.test.ts",
   "shutdown.test.ts",
   "tenancy.test.ts",

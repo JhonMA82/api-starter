@@ -1,3 +1,4 @@
+import type { MetricsRegistry } from "@consulting/core";
 import type { DomainEvent, DomainEventType } from "../domain/domain-events";
 import type { OutboxRecord } from "../domain/outbox.entity";
 import { OutboxEventNotFoundError } from "../domain/outbox.errors";
@@ -8,6 +9,14 @@ export type OutboxHandler = (event: DomainEvent) => Promise<void>;
 export interface OutboxWorkerDeps {
   outbox: OutboxRepository;
   handlers: Partial<Record<DomainEventType, OutboxHandler>>;
+  /**
+   * Optional metrics counters (spec §22.2). Absent -> behavior unchanged.
+   * Counters: outbox_processed_total, outbox_succeeded_total,
+   * outbox_failed_total. A dead-letter counter is intentionally NOT emitted:
+   * markFailed is a void port call, so the dead-letter transition (attempts
+   * >= max, decided inside the repository) is not observable from the worker.
+   */
+  metrics?: Pick<MetricsRegistry, "incrementCounter">;
 }
 
 export interface OutboxPollResult {
@@ -48,6 +57,7 @@ export function createOutboxWorker(deps: OutboxWorkerDeps) {
       let failed = 0;
       for (const record of due) {
         processed += 1;
+        deps.metrics?.incrementCounter("outbox_processed_total");
         try {
           await deps.outbox.markProcessing(record.id);
           const handler = deps.handlers[record.type as DomainEventType];
@@ -56,9 +66,11 @@ export function createOutboxWorker(deps: OutboxWorkerDeps) {
           }
           await handler(toDomainEvent(record));
           await deps.outbox.markSucceeded(record.id);
+          deps.metrics?.incrementCounter("outbox_succeeded_total");
           succeeded += 1;
         } catch (error) {
           failed += 1;
+          deps.metrics?.incrementCounter("outbox_failed_total");
           const message = error instanceof Error ? error.message : String(error);
           const nextAttemptAt = computeNextAttemptAt(record.attempts, new Date());
           try {

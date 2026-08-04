@@ -177,6 +177,52 @@ describe("outbox worker (fake repository)", () => {
     expect(outboxStore[0]).toMatchObject({ status: "succeeded", attempts: 0 });
   });
 
+  test("poll increments metrics counters when metrics are provided (success)", async () => {
+    const counters: Record<string, number> = {};
+    const metrics = {
+      incrementCounter: (name: string, value = 1) => {
+        counters[name] = (counters[name] ?? 0) + value;
+      },
+    };
+    const { outbox } = createFakeOutboxRepository();
+    const worker = createOutboxWorker({
+      outbox,
+      handlers: { "organization.created": async () => {} },
+      metrics,
+    });
+    await outbox.append(makeEvent());
+
+    const result = await worker.poll(10);
+
+    expect(result).toEqual({ processed: 1, succeeded: 1, failed: 0 });
+    expect(counters).toEqual({ outbox_processed_total: 1, outbox_succeeded_total: 1 });
+  });
+
+  test("poll increments failure counters when a handler throws", async () => {
+    const counters: Record<string, number> = {};
+    const metrics = {
+      incrementCounter: (name: string, value = 1) => {
+        counters[name] = (counters[name] ?? 0) + value;
+      },
+    };
+    const { outbox } = createFakeOutboxRepository();
+    const worker = createOutboxWorker({
+      outbox,
+      handlers: {
+        "organization.created": async () => {
+          throw new Error("boom");
+        },
+      },
+      metrics,
+    });
+    await outbox.append(makeEvent());
+
+    const result = await worker.poll(10);
+
+    expect(result).toEqual({ processed: 1, succeeded: 0, failed: 1 });
+    expect(counters).toEqual({ outbox_processed_total: 1, outbox_failed_total: 1 });
+  });
+
   test("reprocess throws OutboxEventNotFoundError for an unknown eventId", async () => {
     const { worker } = createWorker({});
 

@@ -7,6 +7,8 @@ import {
   ReadyResponse,
   VersionResponse,
 } from "@consulting/contracts";
+import type { MetricsRegistry } from "@consulting/core";
+import { createMetricsRegistry } from "@consulting/core";
 import { exampleRoutes } from "@consulting/module-example";
 import {
   createFileRoutes,
@@ -109,9 +111,11 @@ export function createRoutes(
     getRoles?: RoleResolver;
     organizations?: OrganizationsHttpOptions;
     files?: FilesHttpOptions;
+    metrics?: MetricsRegistry;
   } = {},
 ): Hono<{ Variables: AuthVariables }> {
   const getRoles = options.getRoles ?? (async () => []);
+  const metrics = options.metrics ?? createMetricsRegistry();
   const app = new Hono<{ Variables: AuthVariables }>();
 
   app.get(
@@ -165,6 +169,21 @@ export function createRoutes(
         },
         200,
       ),
+  );
+
+  app.get(
+    "/metrics",
+    describeRoute({
+      description: "Prometheus text exposition of runtime metrics (spec §22)",
+      responses: {
+        200: {
+          description: "Metrics in the Prometheus text format (version 0.0.4)",
+          content: { "text/plain": { schema: resolver(z.string()) } },
+        },
+        ...errorResponses(),
+      },
+    }),
+    (c) => c.text(metrics.serialize(), 200, { "content-type": "text/plain; version=0.0.4" }),
   );
 
   app.route("/api/v1", exampleRoutes);

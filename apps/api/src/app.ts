@@ -1,5 +1,6 @@
 import { type Auth, type AuthVariables, createAuth } from "@consulting/auth";
 import type { Config } from "@consulting/config";
+import { createMetricsRegistry, type MetricsRegistry, type Tracer } from "@consulting/core";
 import type { MiddlewareHandler } from "hono";
 import { Hono } from "hono";
 import { bodyLimit } from "hono/body-limit";
@@ -11,13 +12,22 @@ import { timeout } from "hono/timeout";
 import type { RoleResolver } from "./http/authorization";
 import { notFound, onError } from "./http/errors";
 import { jsonLogger } from "./http/logger";
+import { createMetricsMiddleware } from "./http/metrics";
 import { createRoutes, type FilesHttpOptions, type OrganizationsHttpOptions } from "./routes";
 
 /**
  * Builds the API app with the exact middleware pipeline:
- * requestId -> jsonLogger -> secureHeaders -> cors(allowlist) -> bodyLimit(1 MiB,
- * except POST /api/v1/files, which enforces its own cap) -> timeout(10 s)
- * -> compress -> auth session -> routes -> notFound/onError.
+ * requestId -> jsonLogger -> metrics -> secureHeaders -> cors(allowlist) ->
+ * bodyLimit(1 MiB, except POST /api/v1/files, which enforces its own cap) ->
+ * timeout(10 s) -> compress -> auth session -> routes -> notFound/onError.
+ *
+ * Options:
+ * - `metrics`: registry backing GET /metrics (spec §22). Defaults to an
+ *   internal instance when omitted. To poll the registry programmatically
+ *   (e.g. shutdown stats), construct it first and pass it in.
+ * - `tracer`: decoupled tracer contract (§22.3, no provider shipped). When
+ *   provided, each request gets a span and its traceId lands in the log
+ *   entry; a provider adapter can implement `Tracer` later.
  */
 export function createApp(
   config: Config,
@@ -26,6 +36,8 @@ export function createApp(
     getRoles?: RoleResolver;
     organizations?: OrganizationsHttpOptions;
     files?: FilesHttpOptions;
+    metrics?: MetricsRegistry;
+    tracer?: Tracer;
   } = {},
 ): Hono<{
   Variables: AuthVariables;
@@ -40,6 +52,7 @@ export function createApp(
       databaseUrl: config.DATABASE_URL,
     });
   const getRoles: RoleResolver = options.getRoles ?? (async () => []);
+  const metrics = options.metrics ?? createMetricsRegistry();
   const app = new Hono<{ Variables: AuthVariables }>();
 
   const MAX_BODY_BYTES = 1_048_576;
@@ -59,7 +72,8 @@ export function createApp(
   }
 
   app.use(requestId());
-  app.use(jsonLogger(config));
+  app.use(jsonLogger(config, options.tracer));
+  app.use(createMetricsMiddleware(metrics));
   app.use(secureHeaders());
   app.use(cors({ origin: config.CORS_ORIGINS }));
   app.use(bodyLimitExceptUpload(MAX_BODY_BYTES));
@@ -73,6 +87,7 @@ export function createApp(
     "/",
     createRoutes(config, {
       getRoles,
+      metrics,
       ...(options.organizations === undefined ? {} : { organizations: options.organizations }),
       ...(options.files === undefined ? {} : { files: options.files }),
     }),
