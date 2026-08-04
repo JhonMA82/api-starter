@@ -9,6 +9,34 @@ export type {
 export { createApiClient } from "./client";
 export { ApiClientError, isApiClientError } from "./errors";
 export type {
+  BrowserApiClientOptions,
+  NextCachePolicy,
+  NextFetchPolicyOptions,
+  NextServerClientOptions,
+} from "./next";
+export {
+  createBrowserApiClient,
+  createNextFetch,
+  createNextFetchPolicy,
+  createNextQueryTag,
+  createNextServerClient,
+} from "./next";
+export type {
+  ApiQueryKeys,
+  SdkMutationInvalidations,
+  SdkQueries,
+  SdkQueryOptionOverrides,
+  SdkQueryOptions,
+  TanStackQueryKey,
+} from "./tanstack";
+export {
+  createApiQueryKeys,
+  createSdkMutationInvalidations,
+  createSdkQueries,
+  createSdkQueryKey,
+  createSdkQueryOptions,
+} from "./tanstack";
+export type {
   AccessTokenGetter,
   ApiClientOptions,
   ApiJsonRequestInit,
