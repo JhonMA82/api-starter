@@ -5,6 +5,35 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.7.0] - 2026-08-03
+
+### Added
+
+- Files & notifications (Fase 7): `@consulting/module-files` with the
+  `FileStorage` interface (in-memory + local-filesystem adapters; S3/R2/
+  MinIO drop-in later) and the `files` metadata table (migration 0010)
+  as REFERENCES only — no blobs in PostgreSQL — with server-generated
+  storage keys (`<orgId>/<uuid>/<name>`), sha256 content hash, MIME
+  allowlist (png/jpeg/webp/pdf/txt/json) and a 10 MiB size cap;
+  upload/download/soft-delete/list use cases with an injected
+  membership guard.
+- HMAC-signed download URLs: expiring tokens
+  (`base64url(payload).hex(HMAC-SHA256)`) with timing-safe verification
+  that never throws, a public token-authorized download route (401
+  expired/malformed, 404 deleted/missing), one-time `downloadUrl` on
+  upload (201) and fresh signed-URL issuance
+  (`POST /api/v1/files/:id/url`, default 3600s, cap 86400s).
+- `@consulting/module-notifications` with `Mailer`/`NotificationChannel`/
+  `TemplateRenderer` interfaces (no provider coupling — fail-fast SMTP
+  stub, log-mailer for dev, noop for tests), versioned code-first
+  templates with es-default fallback (exact locale → es → first
+  available), the `sent_mails` dedupe ledger (migration 0011, unique
+  `dedupe_key`, `onConflictDoNothing`), async send via the JobQueue
+  (worker re-checks dedupe, rethrows `MailerUnavailableError` for the
+  retry policy), and logs that never include bodies.
+- ADR-0009 (files and notifications: storage abstraction, signed URLs,
+  mailer interfaces).
+
 ## [0.6.0] - 2026-08-03
 
 ### Added

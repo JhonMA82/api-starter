@@ -1,6 +1,6 @@
 # @consulting/api-starter
 
-Plantilla reutilizable de API HTTP en **Bun 1.3.14 + Hono**, organizada como monolito modular con workspaces. Incluye validación de configuración fail-fast, modelo de errores RFC 9457, contratos OpenAPI 3.1 generados desde schemas zod, logger estructurado JSON, imagen Docker multi-stage no-root, persistencia PostgreSQL con Drizzle (Fase 2), autenticación con Better Auth (Fase 3), autorización deny-by-default y auditoría append-only (Fase 4), multi-tenancy con organizaciones, membresías e invitaciones (Fase 5), integraciones: outbox transaccional, cola de jobs, API keys y webhooks firmados (Fase 6), CI de 8 jobs y tests con umbral de cobertura.
+Plantilla reutilizable de API HTTP en **Bun 1.3.14 + Hono**, organizada como monolito modular con workspaces. Incluye validación de configuración fail-fast, modelo de errores RFC 9457, contratos OpenAPI 3.1 generados desde schemas zod, logger estructurado JSON, imagen Docker multi-stage no-root, persistencia PostgreSQL con Drizzle (Fase 2), autenticación con Better Auth (Fase 3), autorización deny-by-default y auditoría append-only (Fase 4), multi-tenancy con organizaciones, membresías e invitaciones (Fase 5), integraciones: outbox transaccional, cola de jobs, API keys y webhooks firmados (Fase 6), archivos con URLs firmadas y notificaciones por correo con plantillas (Fase 7), CI de 8 jobs y tests con umbral de cobertura.
 
 ## Quickstart
 
@@ -138,6 +138,36 @@ hacia el exterior, API keys por organización y webhooks firmados.
   parsear, deduplica por (provider, event id) a nivel de base de datos y
   encola el procesamiento de forma asíncrona.
 
+### Archivos y notificaciones (Fase 7)
+
+Perfil de archivos y notificaciones (spec §15-16, ADR-0009): archivos
+como referencias (nunca blobs en PostgreSQL) y correos con plantillas
+versadas.
+
+- **Archivos:** `modules/files` — la tabla `files` (migración 0010)
+  guarda solo metadatos con claves de almacenamiento generadas por el
+  servidor (`<orgId>/<uuid>/<name>`), hash sha256, allowlist de MIME
+  (png/jpeg/webp/pdf/txt/json) y tope de 10 MiB; tenant-scoped. La
+  interfaz `FileStorage` tiene adaptadores en memoria (tests) y
+  filesystem local (dev); S3/R2/MinIO son drop-in posteriores.
+- **URLs firmadas:** los tokens de descarga se firman con HMAC
+  (payload + expiración, verificación timing-safe); la ruta
+  `GET /api/v1/files/download?token` es pública porque el token firmado
+  ES la autorización. URLs frescas a petición y `downloadUrl` de un solo
+  uso al subir.
+- **Soft delete:** el borrado es lógico únicamente (borrado físico y job
+  de retención diferidos); upload/download/soft-delete/list usan un
+  `MembershipGuard` inyectado.
+- **Notificaciones:** `modules/notifications` — interfaces
+  `Mailer`/`NotificationChannel`/`TemplateRenderer` sin acoplamiento a
+  proveedor (stub SMTP fail-fast, log-mailer en dev, noop en tests);
+  plantillas versadas code-first con fallback de locale es (exacto → es →
+  primera disponible); ledger `sent_mails` (migración 0011) con dedupe
+  por clave única y envío asíncrono vía la cola de jobs (el worker
+  re-verifica el dedupe y relanza `MailerUnavailableError` para los
+  reintentos). Los logs nunca incluyen cuerpos (solo
+  to/template/dedupe/subject).
+
 ### Desarrollo
 
 ```bash
@@ -174,6 +204,12 @@ Arranca `apps/api/src/server.ts` en modo watch. El servidor responde en `http://
 | POST | `/api/v1/organizations/:id/webhooks/:webhookId/toggle` | Activa/desactiva un webhook saliente |
 | GET | `/api/v1/organizations/:id/webhooks/:webhookId/deliveries` | Historial de entregas de un webhook |
 | POST | `/api/v1/webhooks/incoming/:provider` | Webhook entrante público firmado con HMAC (202 aceptado/duplicado, 401 firma inválida, 404 proveedor desconocido) |
+| POST | `/api/v1/files` | Sube un archivo multipart (migración 0010; devuelve 201 + `downloadUrl` de un solo uso) |
+| GET | `/api/v1/files?limit` | Lista los archivos del tenant |
+| GET | `/api/v1/files/:id` | Metadatos de un archivo del tenant |
+| DELETE | `/api/v1/files/:id` | Soft-delete de un archivo (204) |
+| GET | `/api/v1/files/download?token` | Descarga pública firmada con HMAC (el token ES la autorización; 401 expirado/malformado, 404 borrado) |
+| POST | `/api/v1/files/:id/url` | URL firmada nueva (default 3600s, tope 86400s) |
 | GET | `/api/v1/example/hello?name=...` | Módulo de ejemplo (demuestra la estructura por capas) |
 
 Los errores se devuelven como `application/problem+json` (RFC 9457) con `code`, `requestId` e `instance`.
@@ -228,7 +264,7 @@ api/
 ├─ bunfig.toml             umbral de cobertura 0.8
 ├─ catalog/dependencies.json   registro de dependencias (versión, licencia, propósito)
 ├─ docs/architecture.md    visión, capas, matriz de portabilidad (español)
-├─ docs/decisions/         ADR 0001–0008 (inglés)
+├─ docs/decisions/         ADR 0001–0009 (inglés)
 ├─ docs/migrations-runbook.md   runbook de migraciones (español)
 ├─ migrations/             migraciones SQL commitadas + snapshots (drizzle-kit)
 ├─ scripts/db/             runners de migración y seeds (db:migrate, db:seed)
@@ -242,8 +278,10 @@ api/
 ├─ packages/audit/         log de auditoría append-only (tabla + trigger + API record/list)
 └─ modules/
    ├─ example/             módulo de ejemplo por capas (domain/application/http)
+   ├─ files/               archivos como referencias: FileStorage + tabla files + URLs firmadas (Fase 7)
    ├─ jobs/                cola de jobs JobQueue + worker del outbox (adaptador PostgreSQL; in-memory solo para tests) (Fase 6)
    ├─ notes/               módulo de referencia con persistencia (Fase 2)
+   ├─ notifications/       correos con plantillas: Mailer/NotificationChannel/TemplateRenderer + dedupe (Fase 7)
    └─ organizations/       cluster multi-tenant: organizaciones/membresías/invitaciones (Fase 5) + integraciones: outbox, API keys y webhooks (Fase 6)
 ```
 

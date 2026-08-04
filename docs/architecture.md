@@ -199,6 +199,50 @@ webhooks firmados. Ver ADR-0008.
   existencia no se revela); secretos de proveedor en un `Map` estático
   (almacén de secretos en DB documentado como mejora futura).
 
+## Archivos y notificaciones (Fase 7)
+
+El perfil de archivos y notificaciones responde a *cómo se almacenan y
+sirven archivos de tenant y cómo se envían correos de forma fiable* (spec
+§15, §16). Ver ADR-0009.
+
+- **Archivos como referencias, nunca blobs** (§15): `modules/files`
+  (`@consulting/module-files`) con la tabla `files` (migración 0010) que
+  guarda solo metadatos — PostgreSQL no almacena binarios. Claves de
+  almacenamiento generadas por el servidor (`<orgId>/<uuid>/<name>`),
+  nombres saneados, hash sha256 del contenido, tope de 10 MiB y allowlist
+  de MIME (png/jpeg/webp/pdf/txt/json); tenant-scoped con FK
+  `organization_id` en cascada.
+- **Abstracción de almacenamiento:** interfaz `FileStorage` con adaptador
+  en memoria (tests) y adaptador de filesystem local (dev); un adaptador
+  S3/R2/MinIO es un drop-in posterior.
+- **URLs firmadas con HMAC** (§15): los tokens de descarga son
+  `<base64url(JSON {fileId, organizationId, exp})>.<hex(HMAC-SHA256)>` con
+  verificación timing-safe que nunca lanza — token expirado/malformado →
+  401, archivo borrado/inexistente → 404. La ruta
+  `GET /api/v1/files/download?token` es **pública por token**: el token
+  firmado ES la autorización; el API nunca sirve subidas desde el proceso.
+  URLs frescas a petición (`POST /api/v1/files/:id/url`, default 3600s,
+  tope 86400s) y `downloadUrl` de un solo uso en la subida (201).
+- **Casos de uso** (§15): upload/download/soft-delete/list con un
+  `MembershipGuard` inyectado (conectado a la tenancy de organizaciones en
+  `apps/api`). El borrado es soft-delete únicamente; el borrado físico y el
+  job de retención quedan diferidos.
+- **Notificaciones por correo** (§16): `modules/notifications`
+  (`@consulting/module-notifications`) con las interfaces
+  `Mailer`/`NotificationChannel`/`TemplateRenderer` sin acoplamiento a
+  proveedor — el stub SMTP lanza fail-fast ("transport not implemented"),
+  log-mailer para previsualización en dev y noop para tests. Plantillas
+  versionadas code-first (`invitation.v1` es+en, `welcome.v1` solo es) con
+  fallback es por defecto (locale exacto → es → primera disponible) y
+  sustitución `{var}`.
+- **Dedupe y envío asíncrono** (§16): ledger `sent_mails` (migración 0011)
+  con `dedupe_key` único y `onConflictDoNothing`; el servicio de envío
+  detecta duplicados → renderiza → encola el job `notification.send` vía
+  la JobQueue (o envío síncrono); el worker re-verifica el dedupe antes de
+  enviar y relanza `MailerUnavailableError` para que la política de
+  reintentos de los jobs la gestione. Los logs **nunca** incluyen cuerpos
+  (solo to/template/dedupe/subject).
+
 ## Perfiles y fases futuras (resumen)
 
 - **Fase 0+1 (completada):** fundación — registros, ADRs, núcleo HTTP con rutas base, OpenAPI 3.1 + Scalar, módulo de ejemplo, Docker y CI de 5 jobs.
@@ -207,7 +251,8 @@ webhooks firmados. Ver ADR-0008.
 - **Fase 4 (completada, autorización single-tenant):** catálogo explícito de permisos `request.*`, roles admin/reviewer/member y políticas ABAC en `packages/authorization` (deny by default); enforcement HTTP con `requirePermission` y la costura `getRoles` (códigos `401 UNAUTHORIZED` / `403 FORBIDDEN`, rutas demo `/api/v1/authorization/*`); auditoría append-only `audit_log` (migración 0003) con trigger de base de datos en `packages/audit`. Ver [Autorización (Fase 4)](#autorización-fase-4).
 - **Fase 5 (completada, multi-tenancy):** `modules/organizations` (organizaciones/membresías/invitaciones, migración 0004) con shared schema; roles de org predefinidos (owner/admin/auditor/member); `TenantContext` + flujo de resolución con `x-organization-id`; repositorios tenant-scoped con protección IDOR; ciclo de vida completo (crear/invitar/aceptar/transferir/suspender/eliminar miembro/borrar con confirmación) e invariantes (§11.8); auditoría por tenant sobre `packages/audit` y ADR-0007. Ver [Multi-tenancy (Fase 5)](#multi-tenancy-fase-5).
 - **Fase 6 (completada, integraciones):** outbox transaccional + eventos de dominio (migración 0005), `modules/jobs` con la JobQueue (adaptador PostgreSQL; in-memory solo para tests) + outbox worker con backoff/dead-letter/reproceso (migración 0006), API keys por organización con almacenamiento solo-hash (migración 0007), webhooks salientes firmados con HMAC (migración 0008) y webhooks entrantes verify-first con dedupe por provider+event id (migración 0009). Ver [Integraciones (Fase 6)](#integraciones-fase-6) y ADR-0008.
-- **Fase 7 (archivos):** siguiente fase planificada — storage adapter, signed URLs, mailer y templates; además se prevé crecimiento hacia rutas HTTP del módulo `notes` y más módulos de negocio bajo `/api/v1`, junto con la revisión de decisiones que lo requieran (p.ej. manejo de secretos, gate de capas automatizado).
+- **Fase 7 (completada, archivos y notificaciones):** `modules/files` con la abstracción `FileStorage` (adaptadores en memoria y filesystem local), tabla `files` de solo referencias (migración 0010, tenant-scoped, sha256, allowlist de MIME, tope 10 MiB), URLs de descarga firmadas con HMAC (ruta pública por token) y soft-delete con `MembershipGuard` inyectado; `modules/notifications` con interfaces `Mailer`/`NotificationChannel`/`TemplateRenderer` (sin acoplamiento a proveedor), plantillas versionadas con fallback es, ledger de dedupe `sent_mails` (migración 0011) y envío asíncrono vía JobQueue. Ver [Archivos y notificaciones (Fase 7)](#archivos-y-notificaciones-fase-7) y ADR-0009.
+- **Fase 8 (generador):** siguiente fase planificada — perfiles, features, create project/add feature/create module; además se prevé crecimiento hacia rutas HTTP del módulo `notes` y más módulos de negocio bajo `/api/v1`, junto con la revisión de decisiones que lo requieran (p.ej. manejo de secretos, gate de capas automatizado).
 - **Perfil Docker `core`:** solo el servicio `api`. La base de datos vive en el perfil `database` (postgres) y no es un requisito del servidor HTTP.
 
 ## Modelo de datos y errores
