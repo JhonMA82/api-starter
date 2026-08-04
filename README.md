@@ -1,6 +1,6 @@
 # @consulting/api-starter
 
-Plantilla reutilizable de API HTTP en **Bun 1.3.14 + Hono**, organizada como monolito modular con workspaces. Incluye validación de configuración fail-fast, modelo de errores RFC 9457, contratos OpenAPI 3.1 generados desde schemas zod, logger estructurado JSON, imagen Docker multi-stage no-root, persistencia PostgreSQL con Drizzle (Fase 2), autenticación con Better Auth (Fase 3), autorización deny-by-default y auditoría append-only (Fase 4), multi-tenancy con organizaciones, membresías e invitaciones (Fase 5), integraciones: outbox transaccional, cola de jobs, API keys y webhooks firmados (Fase 6), archivos con URLs firmadas y notificaciones por correo con plantillas (Fase 7), generador declarativo de perfiles y features (Fase 8), SDK TypeScript e kits de integración frontend: TanStack Query, Next.js, móvil y Tauri (Fase 9), CI de 8 jobs y tests con umbral de cobertura.
+Plantilla reutilizable de API HTTP en **Bun 1.3.14 + Hono**, organizada como monolito modular con workspaces. Incluye validación de configuración fail-fast, modelo de errores RFC 9457, contratos OpenAPI 3.1 generados desde schemas zod, logger estructurado JSON, imagen Docker multi-stage no-root, persistencia PostgreSQL con Drizzle (Fase 2), autenticación con Better Auth (Fase 3), autorización deny-by-default y auditoría append-only (Fase 4), multi-tenancy con organizaciones, membresías e invitaciones (Fase 5), integraciones: outbox transaccional, cola de jobs, API keys y webhooks firmados (Fase 6), archivos con URLs firmadas y notificaciones por correo con plantillas (Fase 7), generador declarativo de perfiles y features (Fase 8), SDK TypeScript e kits de integración frontend: TanStack Query, Next.js, móvil y Tauri (Fase 9), y hardening: threat model, observabilidad, load test reproducible, Docker endurecido y backup/restore probados (Fase 10), con CI de 8 jobs y tests con umbral de cobertura.
 
 ## Quickstart
 
@@ -226,6 +226,33 @@ credenciales y cabeceras.
   backend generados lo podan salvo que una feature frontend futura lo
   seleccione. Los kits n8n y Python permanecen fuera del alcance de esta fase.
 
+### Operación y hardening (Fase 10)
+
+- **Modelo de amenazas:** [`docs/threat-model.md`](docs/threat-model.md) —
+  amenazas (§20.1), controles obligatorios (§20.2), política de soporte
+  (§20.3) y datos personales (§20.4), con evidencia `archivo:línea` y
+  prioridades de remediación.
+- **Observabilidad:** `GET /metrics` expone métricas en formato texto
+  Prometheus (registry sin dependencias en `packages/core`); los logs JSON
+  nunca incluyen cuerpos ni ids crudos (`userId`/`tenantId` seudonimizados);
+  contrato `Tracer`/`Span` con noop por defecto, listo para un adaptador OTel
+  futuro. Ver ADR-0012.
+- **Load test reproducible:** `bun scripts/load-test.ts --duration=10
+  --concurrency=20` (Bun only, sin dependencias nuevas); guía en
+  [`docs/load-test.md`](docs/load-test.md) y resultados en
+  [`docs/load-test-results.md`](docs/load-test-results.md).
+- **Worker standalone:** `bun run worker` (o `docker compose --profile worker
+  up`) ejecuta el worker del outbox con shutdown graceful sobre
+  SIGTERM/SIGINT.
+- **Backup/restore probados:** `bun run db:backup` y `bun run db:restore --
+  --file=<volcado> --force` (destructivo); runbook con rotación, drill de
+  verificación y objetivos RPO/RTO en
+  [`docs/backup-restore.md`](docs/backup-restore.md).
+- **Validación final:** [`VALIDATION_REPORT.md`](VALIDATION_REPORT.md) —
+  comandos ejecutados, resultados, perfiles generados, pruebas, cobertura
+  crítica, Docker, limitaciones, riesgos pendientes, decisiones no
+  implementadas y recomendaciones para 0.2.0.
+
 ### Desarrollo
 
 ```bash
@@ -295,8 +322,8 @@ DATABASE_URL=postgres://postgres:postgres@localhost:5432/api bun test --parallel
 ### Docker
 
 ```bash
-docker build -t consulting-api:0.1.0 .
-docker run --rm -e LOG_LEVEL=info -p 3000:3000 consulting-api:0.1.0
+docker build -t consulting-api:0.10.0 .
+docker run --rm -e LOG_LEVEL=info -p 3000:3000 consulting-api:0.10.0
 ```
 
 La imagen es multi-stage sobre `oven/bun:1.3.14-slim`, ejecuta como usuario no-root `bun` y expone un healthcheck contra `/health`.
@@ -318,14 +345,19 @@ api/
 ├─ .bun-version            versión de Bun fijada (1.3.14)
 ├─ .env.example            plantilla de entorno (sin secretos)
 ├─ Dockerfile              imagen multi-stage no-root
-├─ docker-compose.yml      perfiles "core" (api) y "database" (postgres)
+├─ docker-compose.yml      perfiles "core" (api), "database" (postgres) y "worker" (outbox worker)
 ├─ bunfig.toml             umbral de cobertura 0.8
+├─ VALIDATION_REPORT.md    reporte final de validación (Fase 10, spec §31)
 ├─ catalog/dependencies.json   registro de dependencias (versión, licencia, propósito)
 ├─ generator/              catálogo, manifiestos, plantillas, CLI y tests (Fase 8)
 ├─ integrations/           ejemplos de integración frontend: TanStack Query, Next, móvil y Tauri (Fase 9)
 ├─ docs/architecture.md    visión, capas, matriz de portabilidad (español)
-├─ docs/decisions/         ADR 0001–0011 (inglés)
+├─ docs/decisions/         ADR 0001–0012 (inglés)
 ├─ docs/migrations-runbook.md   runbook de migraciones (español)
+├─ docs/backup-restore.md  runbook de backup/restore probados (español)
+├─ docs/load-test.md       guía del load test reproducible (español)
+├─ docs/load-test-results.md   resultados del load test (español)
+├─ docs/threat-model.md    modelo de amenazas (Fase 10, español)
 ├─ migrations/             migraciones SQL commitadas + snapshots (drizzle-kit)
 ├─ scripts/db/             runners de migración y seeds (db:migrate, db:seed)
 ├─ apps/api/               aplicación HTTP (middleware, rutas base, bootstrap, server)

@@ -337,7 +337,58 @@ credenciales y cabeceras. Ver
   de los perfiles de runtime del generador: los proyectos generados lo podan
   hasta que una feature frontend futura lo seleccione.
 
-## Perfiles y fases futuras (resumen)
+## Hardening (Fase 10)
+
+La Fase 10 cierra la preparación operativa del starter (spec §20, §22, §23,
+§31) sin acoplarse a proveedores. Ver
+[ADR-0012](decisions/0012-hardening-observability.md).
+
+- **Modelo de amenazas (spec §20):** `docs/threat-model.md` documenta las
+  amenazas del §20.1 con evidencia `archivo:línea` de las mitigaciones
+  actuales, la tabla de controles obligatorios del §20.2, la política de
+  soporte administrativo del §20.3 (sin superficie hoy; disabled by default
+  como requisito futuro) y el tratamiento de datos personales del §20.4, con
+  un orden de remediación priorizado. El único cambio de código del WU1 alineó
+  el tope de subida de 10 MiB con el límite global de payload de 1 MiB
+  (`apps/api/src/app.ts`, `modules/files/src/http/file.routes.ts`).
+- **Métricas (spec §22.1/§22.2):** registry sin dependencias en
+  `packages/core/src/metrics.ts` (counters/gauges/histograms con exposición
+  en texto Prometheus `text/plain; version=0.0.4`); middleware
+  `apps/api/src/http/metrics.ts` que emite `http_requests_total`,
+  `http_request_duration_seconds` y `http_errors_total` por petición; endpoint
+  `GET /metrics`; contadores del outbox y de entregas de webhooks sin ids en
+  labels (`modules/organizations/src/application/outbox-worker.ts`,
+  `deliver-webhook.ts`).
+- **Logging (spec §22):** contrato `LogEntry` en `packages/core/src/logger.ts`
+  (timestamp/level/service/environment/version/requestId/route/status/
+  duration + `userId`/`tenantId` seudonimizados y `traceId` opcional);
+  `apps/api/src/http/logger.ts` nunca loguea cuerpos, correos ni cabeceras.
+- **Tracer (spec §22.3):** contrato desacoplado `Tracer`/`Span` con
+  `createNoopTracer()` en `packages/core/src/tracer.ts`; sin dependencia de
+  OpenTelemetry — un adaptador OTel es un drop-in futuro tras el contrato.
+- **Load test reproducible (spec §23):** `scripts/load-test.ts` (Bun only, sin
+  dependencias nuevas) con opciones de duración/concurrencia/rate/ruta y
+  resumen JSON; `docs/load-test.md` (ejecución, escenarios, umbrales, CI) y
+  `docs/load-test-results.md` (0 errores, ~190-250 req/s a 20 workers en
+  localhost; p95 informativo, no un gate).
+- **Docker y compose (spec §23.1/§23.2/§23.4):** imagen multi-stage sobre
+  `oven/bun:1.3.14-slim` que instala el **workspace completo** con
+  `--frozen-lockfile`, usuario no-root `bun`, labels OCI versionables
+  (`IMAGE_VERSION` default 0.10.0, `IMAGE_SOURCE`), `STOPSIGNAL SIGTERM` y
+  `APP_VERSION` desde el build; `.dockerignore` endurecido (dumps, tooling
+  local y coverage fuera del contexto). Perfil compose `worker` para
+  `scripts/worker.ts` (outbox worker standalone con shutdown graceful); los
+  perfiles redis/storage/observability se omiten a propósito (spec §23.2: sin
+  servicios sin implementación), con sus puntos de extensión en
+  ADR-0008/ADR-0009.
+- **Backup/restore probados (spec §20.2):** `scripts/db/backup.ts` (pg_dump
+  custom, contraseña solo por `PGPASSWORD`, logs enmascarados) y
+  `scripts/db/restore.ts` (`--file` + `--force` destructivo); tests reales
+  backup→validate→restore contra una DB scratch y el runbook
+  `docs/backup-restore.md` (rotación, drill de verificación, RPO/RTO). La
+  automatización por cron queda diferida: hoy es runbook + scripts.
+
+## Resumen de fases (roadmap completo a través de Fase 10)
 
 - **Fase 0+1 (completada):** fundación — registros, ADRs, núcleo HTTP con rutas base, OpenAPI 3.1 + Scalar, módulo de ejemplo, Docker y CI de 5 jobs.
 - **Fase 2 (completada, persistencia):** PostgreSQL 17 + Drizzle ORM sobre postgres.js, migraciones SQL commitadas bajo `migrations/`, módulo `notes` de referencia con tests de DB reales, scripts `db:*` con podman, perfil `database` en Docker Compose y CI de 8 jobs. Ver ADR-0005 y `docs/migrations-runbook.md`.
@@ -348,6 +399,7 @@ credenciales y cabeceras. Ver
 - **Fase 7 (completada, archivos y notificaciones):** `modules/files` con la abstracción `FileStorage` (adaptadores en memoria y filesystem local), tabla `files` de solo referencias (migración 0010, tenant-scoped, sha256, allowlist de MIME, tope 10 MiB), URLs de descarga firmadas con HMAC (ruta pública por token) y soft-delete con `MembershipGuard` inyectado; `modules/notifications` con interfaces `Mailer`/`NotificationChannel`/`TemplateRenderer` (sin acoplamiento a proveedor), plantillas versionadas con fallback es, ledger de dedupe `sent_mails` (migración 0011) y envío asíncrono vía JobQueue. Ver [Archivos y notificaciones (Fase 7)](#archivos-y-notificaciones-fase-7) y ADR-0009.
 - **Fase 8 (completada, generador):** catálogo declarativo de features y perfiles, validación, `create:project` con poda física y cirugía del journal, `create:module` con scopes y flags, y `add:feature` con cierre de requisitos, alias, protección por marcadores y plan manual para tenancy. Ver [Generador (Fase 8)](#generador-fase-8) y ADR-0010.
 - **Fase 9 (completada, kits de integración frontend):** SDK TypeScript agnóstico (`packages/sdk`) con kits para TanStack Query v5, Next.js App Router, móvil (Ignite/React Native) y desktop (Tauri), cola offline con idempotencia y ejemplos en `integrations/`. Los kits n8n y Python quedan fuera del alcance de esta fase (decisión del usuario) y permanecen como trabajo futuro. Ver [Kits de integración frontend (Fase 9)](#kits-de-integración-frontend-fase-9) y ADR-0011.
+- **Fase 10 (completada, hardening):** threat model (`docs/threat-model.md`, spec §20), observabilidad sin acoplamiento de proveedor (registry de métricas + `GET /metrics`, logging seudonimizado, contrato `Tracer`/`Span`), load test reproducible Bun-only (`scripts/load-test.ts` + `docs/load-test*.md`), Docker multi-stage endurecido con el workspace completo y perfil compose `worker`, y backup/restore probados (`scripts/db/backup|restore.ts` + `docs/backup-restore.md`). Roadmap de Fases 0-10 completo; la documentación final (spec §31) cierra con `VALIDATION_REPORT.md` y la consolidación del CHANGELOG `0.10.0`. Ver [Hardening (Fase 10)](#hardening-fase-10) y ADR-0012.
 - **Perfil Docker `core`:** solo el servicio `api`. La base de datos vive en el perfil `database` (postgres) y no es un requisito del servidor HTTP.
 
 ## Modelo de datos y errores

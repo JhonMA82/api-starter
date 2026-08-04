@@ -5,10 +5,32 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [0.10.0] - 2026-08-03
 
 ### Added
 
+- Hardening (Fase 10): threat model in `docs/threat-model.md` (spec §20) —
+  one row per §20.1 threat with `file:line` mitigations, the §20.2 mandatory
+  controls table, the §20.3 admin-support policy (no support surface, disabled
+  by default as a future requirement) and §20.4 personal data treatment; the
+  documented 10 MiB file-upload cap was unreachable behind the 1 MiB global
+  `bodyLimit` and was aligned in `apps/api/src/app.ts` and
+  `modules/files/src/http/file.routes.ts` with tests.
+- Hardening (Fase 10, WU2): dependency-free Prometheus-compatible metrics
+  registry in `packages/core` (counters/gauges/histograms, text exposition
+  `text/plain; version=0.0.4`), request metrics middleware
+  (`http_requests_total`, `http_request_duration_seconds`, `http_errors_total`)
+  and `GET /metrics`; pseudonymized `userId`/`tenantId` in request logs
+  (`LogEntry` contract, never bodies/emails/headers); decoupled
+  `Tracer`/`Span` contract with `createNoopTracer()` (no OpenTelemetry
+  dependency, provider adapter is a future drop-in); outbox and webhook
+  delivery counters with no ids in labels; generator manifest entry for the
+  metrics tests.
+- Hardening (Fase 10, WU3): reproducible Bun-only load generator
+  `scripts/load-test.ts` (duration/concurrency/rate/path options, JSON
+  summary, conservative rate gate) with `docs/load-test.md` and results in
+  `docs/load-test-results.md` (0 errors; ~190-250 req/s at 20 workers on
+  localhost).
 - Hardening (Fase 10, WU4): Dockerfile multi-stage que instala el workspace
   completo con `--frozen-lockfile` (todos los manifests de apps/packages/
   modules), labels OCI versionables por build (`IMAGE_VERSION`, default
