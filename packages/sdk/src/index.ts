@@ -9,6 +9,22 @@ export type {
 export { createApiClient } from "./client";
 export { ApiClientError, isApiClientError } from "./errors";
 export type {
+  CreateMobileApiClientOptions,
+  CreateMobileSessionOptions,
+  MobileSession,
+  MobileTokens,
+  MobileUploadMetadata,
+  RefreshSession,
+  SecureTokenStore,
+} from "./mobile";
+export {
+  createIdempotencyKey,
+  createMobileApiClient,
+  createMobileSession,
+  createMobileUploadForm,
+  withIdempotencyKey,
+} from "./mobile";
+export type {
   BrowserApiClientOptions,
   NextCachePolicy,
   NextFetchPolicyOptions,
@@ -21,6 +37,21 @@ export {
   createNextQueryTag,
   createNextServerClient,
 } from "./next";
+export type {
+  OfflineMutation,
+  OfflineMutationRunner,
+  OfflineMutationRunnerOptions,
+  OfflineMutationRunResult,
+  OfflineMutationSender,
+  OfflineMutationStore,
+  RetryDelayOptions,
+} from "./offline";
+export {
+  computeRetryDelay,
+  createInMemoryOfflineMutationStore,
+  createOfflineMutationRunner,
+  shouldRetry,
+} from "./offline";
 export type {
   ApiQueryKeys,
   SdkMutationInvalidations,
@@ -36,6 +67,21 @@ export {
   createSdkQueryKey,
   createSdkQueryOptions,
 } from "./tanstack";
+export type {
+  CreateTauriApiClientOptions,
+  TauriCredentialBridge,
+  TauriCredentialCommandOverrides,
+  TauriCredentialCommands,
+  TauriInvoke,
+  TauriSystemAuth,
+  TauriSystemAuthOptions,
+} from "./tauri";
+export {
+  createTauriApiClient,
+  createTauriCredentialBridge,
+  createTauriSystemAuth,
+  DEFAULT_TAURI_CREDENTIAL_COMMANDS,
+} from "./tauri";
 export type {
   AccessTokenGetter,
   ApiClientOptions,
