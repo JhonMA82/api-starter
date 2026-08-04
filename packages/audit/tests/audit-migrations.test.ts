@@ -126,6 +126,7 @@ describeDb("audit migrations (real database)", () => {
       "notes",
       "organizations",
       "outbox_events",
+      "sent_mails",
       "session",
       "user",
       "verification",
