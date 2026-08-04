@@ -19,5 +19,6 @@
     "skipLibCheck": true,
     "isolatedModules": true
   },
-  "include": ["apps", "packages", "modules", "scripts", "generator"]
+  "include": ["apps", "packages", "modules", "scripts", "generator"],
+  "exclude": ["**/node_modules", "generator/templates"]
 }
