@@ -16,6 +16,7 @@ import {
   ALL_MODULES,
   ALL_PACKAGES,
   type ProjectPlan,
+  planFeatureSet,
   planProject,
 } from "../src/plan";
 import {
@@ -316,6 +317,7 @@ describe("template selection", () => {
     const variants = [
       "app.base.ts",
       "app.auth.ts",
+      "app.auth-only.ts",
       "routes.base.ts",
       "routes.auth.ts",
       "routes.tenancy.ts",
@@ -342,6 +344,10 @@ describe("template selection", () => {
     });
     expect(selectTemplates(planProject("data-api"))).toEqual({
       app: "app.base.ts",
+      routes: "routes.base.ts",
+    });
+    expect(selectTemplates(planFeatureSet(["auth"]))).toEqual({
+      app: "app.auth-only.ts",
       routes: "routes.base.ts",
     });
     expect(selectTemplates(planProject("authenticated"))).toEqual({

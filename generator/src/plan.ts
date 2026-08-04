@@ -1,6 +1,6 @@
-import { UnknownProfileError } from "./errors";
+import { UnknownFeatureError, UnknownProfileError } from "./errors";
 import { getFeature } from "./features";
-import { validateProfile } from "./validate";
+import { validateFeatureSet, validateProfile } from "./validate";
 
 /**
  * The complete set of resource names that exist in this repository. The plan
@@ -163,23 +163,7 @@ function sorted(values: Iterable<string>): string[] {
   return [...values].sort();
 }
 
-/**
- * Computes the materialization plan for a profile: which modules, packages,
- * migrations, dependencies, and env vars the generated project keeps. Pure
- * logic — no fs access. Validates the profile first; throws
- * UnknownProfileError for unknown profiles.
- */
-export function planProject(profileId: string): ProjectPlan {
-  const validated = validateProfile(profileId);
-  if ("errors" in validated) {
-    if (validated.errors.length === 1 && validated.errors[0]?.kind === "unknown-profile") {
-      throw new UnknownProfileError(profileId);
-    }
-    const details = validated.errors.map((issue) => issue.message).join("; ");
-    throw new Error(`profile "${profileId}" is invalid: ${details}`);
-  }
-
-  const features = validated.features;
+function buildProjectPlan(profileId: string, features: readonly string[]): ProjectPlan {
   const featureSet = new Set(features);
 
   const keepModules = new Set<string>(BASE_MODULES);
@@ -259,7 +243,7 @@ export function planProject(profileId: string): ProjectPlan {
 
   return {
     profile: profileId,
-    features,
+    features: [...features],
     keepModules: keepModulesList,
     removeModules: sorted(ALL_MODULES.filter((name) => !keepModules.has(name))),
     keepPackages: keepPackagesList,
@@ -275,4 +259,37 @@ export function planProject(profileId: string): ProjectPlan {
     keepFiles: [],
     removeFiles: removeFiles.sort(),
   };
+}
+
+/**
+ * Computes the materialization plan for an arbitrary, already-normalized
+ * feature set. This is deliberately pure so incremental tooling can plan a
+ * generated project without pretending that it matches a named profile.
+ */
+export function planFeatureSet(features: readonly string[], profileId = "custom"): ProjectPlan {
+  const issues = validateFeatureSet(features);
+  const unknown = issues.find((issue) => issue.kind === "unknown-feature");
+  if (unknown !== undefined) {
+    throw new UnknownFeatureError(unknown.feature);
+  }
+  if (issues.length > 0) {
+    throw new Error(`feature set is invalid: ${issues.map((issue) => issue.message).join("; ")}`);
+  }
+  return buildProjectPlan(profileId, features);
+}
+
+/**
+ * Computes the materialization plan for a named profile. Throws
+ * UnknownProfileError for unknown profiles.
+ */
+export function planProject(profileId: string): ProjectPlan {
+  const validated = validateProfile(profileId);
+  if ("errors" in validated) {
+    if (validated.errors.length === 1 && validated.errors[0]?.kind === "unknown-profile") {
+      throw new UnknownProfileError(profileId);
+    }
+    const details = validated.errors.map((issue) => issue.message).join("; ");
+    throw new Error(`profile "${profileId}" is invalid: ${details}`);
+  }
+  return buildProjectPlan(profileId, validated.features);
 }

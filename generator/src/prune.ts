@@ -177,17 +177,30 @@ export function rewriteDrizzleConfig(source: string, plan: ProjectPlan): string 
 /** Drops env var lines for removed features; keeps base lines and comments. */
 export function rewriteEnvExample(source: string, plan: ProjectPlan): string {
   const keepEnvVars = new Set(plan.keepEnvVars);
-  return source
-    .split("\n")
-    .flatMap((line) => {
-      const match = line.match(/^#?\s*([A-Z][A-Z0-9_]*)=/);
-      const envVar = match?.[1];
-      if (envVar !== undefined && !keepEnvVars.has(envVar)) {
-        return [];
-      }
-      return [line];
-    })
-    .join("\n");
+  const lines = source.split("\n").flatMap((line) => {
+    const match = line.match(/^#?\s*([A-Z][A-Z0-9_]*)=/);
+    const envVar = match?.[1];
+    if (envVar !== undefined && !keepEnvVars.has(envVar)) {
+      return [];
+    }
+    return [line];
+  });
+  const placeholders: Record<string, string> = {
+    S3_ENDPOINT: "# S3_ENDPOINT=http://localhost:9000",
+    S3_BUCKET: "# S3_BUCKET=files",
+    SMTP_URL: "# SMTP_URL=smtp://localhost:1025",
+  };
+  const present = new Set(
+    lines
+      .map((line) => line.match(/^#?\s*([A-Z][A-Z0-9_]*)=/)?.[1])
+      .filter((value): value is string => value !== undefined),
+  );
+  for (const envVar of ["S3_ENDPOINT", "S3_BUCKET", "SMTP_URL"]) {
+    if (keepEnvVars.has(envVar) && !present.has(envVar)) {
+      lines.push(placeholders[envVar] as string);
+    }
+  }
+  return lines.join("\n");
 }
 
 /**

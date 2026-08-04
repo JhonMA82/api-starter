@@ -22,7 +22,11 @@ export interface TemplateSelection {
 }
 
 export function selectTemplates(plan: ProjectPlan): TemplateSelection {
-  const app = plan.features.includes("auth") ? "app.auth.ts" : "app.base.ts";
+  const app = plan.features.includes("auth")
+    ? plan.features.includes("authorization") || plan.features.includes("tenancy")
+      ? "app.auth.ts"
+      : "app.auth-only.ts"
+    : "app.base.ts";
   const routes = plan.features.includes("tenancy")
     ? "routes.tenancy.ts"
     : plan.features.includes("authorization")

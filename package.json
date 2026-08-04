@@ -22,6 +22,7 @@
     "db:down": "podman rm -f api-pg 2>/dev/null || true",
     "generator:sync": "bun generator/src/sync-manifests.ts",
     "generator:validate": "bun generator/src/cli-validate.ts",
+    "add:feature": "bun generator/src/add-feature.ts",
     "create:project": "bun generator/src/create-project.ts",
     "create:module": "bun generator/src/create-module.ts"
   },
