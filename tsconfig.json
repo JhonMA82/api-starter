@@ -19,5 +19,5 @@
     "skipLibCheck": true,
     "isolatedModules": true
   },
-  "include": ["apps", "packages", "modules", "scripts"]
+  "include": ["apps", "packages", "modules", "scripts", "generator"]
 }
