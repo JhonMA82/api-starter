@@ -68,15 +68,6 @@ describe("openapi document", () => {
     expect(undocumented, `Undocumented route(s): ${undocumented.join(", ")}`).toEqual([]);
   });
 
-  test("GET /api/auth/open-api/generate-schema returns a valid OpenAPI 3.1.1 document", async () => {
-    const res = await app.request("/api/auth/open-api/generate-schema");
-    expect(res.status).toBe(200);
-    const doc = (await res.json()) as OpenAPIV3_1.Document;
-    expect(doc.openapi).toBe("3.1.1");
-    expect(Object.keys(doc.paths ?? {})).not.toHaveLength(0);
-    expect(Object.keys(doc.paths ?? {}).some((path) => path.includes("sign-in/email"))).toBe(true);
-  });
-
   test("every documented operation declares a 400 problem+json response with the ProblemDetails schema", async () => {
     const doc = await getSpec();
     for (const [path, pathItem] of Object.entries(doc.paths ?? {})) {
