@@ -1,6 +1,6 @@
 # @consulting/api-starter
 
-Plantilla reutilizable de API HTTP en **Bun 1.3.14 + Hono**, organizada como monolito modular con workspaces. Incluye validación de configuración fail-fast, modelo de errores RFC 9457, contratos OpenAPI 3.1 generados desde schemas zod, logger estructurado JSON, imagen Docker multi-stage no-root, persistencia PostgreSQL con Drizzle (Fase 2), autenticación con Better Auth (Fase 3), autorización deny-by-default y auditoría append-only (Fase 4), multi-tenancy con organizaciones, membresías e invitaciones (Fase 5), integraciones: outbox transaccional, cola de jobs, API keys y webhooks firmados (Fase 6), archivos con URLs firmadas y notificaciones por correo con plantillas (Fase 7), CI de 8 jobs y tests con umbral de cobertura.
+Plantilla reutilizable de API HTTP en **Bun 1.3.14 + Hono**, organizada como monolito modular con workspaces. Incluye validación de configuración fail-fast, modelo de errores RFC 9457, contratos OpenAPI 3.1 generados desde schemas zod, logger estructurado JSON, imagen Docker multi-stage no-root, persistencia PostgreSQL con Drizzle (Fase 2), autenticación con Better Auth (Fase 3), autorización deny-by-default y auditoría append-only (Fase 4), multi-tenancy con organizaciones, membresías e invitaciones (Fase 5), integraciones: outbox transaccional, cola de jobs, API keys y webhooks firmados (Fase 6), archivos con URLs firmadas y notificaciones por correo con plantillas (Fase 7), generador declarativo de perfiles y features (Fase 8), CI de 8 jobs y tests con umbral de cobertura.
 
 ## Quickstart
 
@@ -168,6 +168,35 @@ versadas.
   reintentos). Los logs nunca incluyen cuerpos (solo
   to/template/dedupe/subject).
 
+### Generador (Fase 8)
+
+El generador vive en `generator/`, fuera de los workspaces de runtime. Su
+catálogo de 12 features y sus perfiles (`minimal`, `data-api`, `authenticated`,
+`multi-tenant`, `platform`) permiten crear proyectos con poda física, no con
+feature flags que instalan capacidades no seleccionadas. El perfil `platform`
+añade `observability` a `multi-tenant`; `dynamicRoles` permanece diferido por
+su conflicto con `authorization`.
+
+```bash
+bun run generator:validate -- --profile=minimal
+bun run create:project -- --profile=authenticated --out=../my-api
+bun run add:feature -- --feature=multitenancy --project=../my-api --with-requires
+bun run create:module -- --name=requests --scope=tenant --crud --events --audit --out=../my-api/modules
+```
+
+`create:project` elimina físicamente módulos, paquetes, migraciones,
+snapshots y tests de aplicación no seleccionados, reescribe el journal y deja
+`GENERATED.md`. `add:feature` calcula requisitos transitivos, acepta
+`multitenancy` como alias de `tenancy`, protege archivos custom mediante
+marcadores y escribe `FEATURE_PLAN.md`. Al añadir tenancy muestra una
+advertencia y un plan de migración para revisión; no muta datos ni ejecuta ese
+plan. Los destinos no vacíos y los archivos protegidos fallan de forma segura;
+`--force` hace explícita la recreación o sobrescritura.
+
+Después de crear o modificar un proyecto hay que ejecutar `bun install`; el
+generador no edita `bun.lock`. El wiring de proveedores queda a cargo del
+proyecto generado, por ejemplo para S3/R2/MinIO o un transporte SMTP.
+
 ### Desarrollo
 
 ```bash
@@ -263,8 +292,9 @@ api/
 ├─ docker-compose.yml      perfiles "core" (api) y "database" (postgres)
 ├─ bunfig.toml             umbral de cobertura 0.8
 ├─ catalog/dependencies.json   registro de dependencias (versión, licencia, propósito)
+├─ generator/              catálogo, manifiestos, plantillas, CLI y tests (Fase 8)
 ├─ docs/architecture.md    visión, capas, matriz de portabilidad (español)
-├─ docs/decisions/         ADR 0001–0009 (inglés)
+├─ docs/decisions/         ADR 0001–0010 (inglés)
 ├─ docs/migrations-runbook.md   runbook de migraciones (español)
 ├─ migrations/             migraciones SQL commitadas + snapshots (drizzle-kit)
 ├─ scripts/db/             runners de migración y seeds (db:migrate, db:seed)

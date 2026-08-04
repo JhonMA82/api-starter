@@ -5,6 +5,23 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.8.0] - 2026-08-03
+
+### Added
+
+- Fase 8 generator catalog with 12 declarative features, five profiles,
+  committed JSON manifests and validation for unknown ids, duplicates, missing
+  requirements and excluded-feature conflicts.
+- `create:project` with physical feature pruning, migration snapshot and
+  journal surgery, template selection, dependency/configuration rewrites and
+  safe destination idempotency with explicit `--force`.
+- `create:module` with global, user and tenant scopes plus optional CRUD,
+  domain events and best-effort audit scaffolding.
+- `add:feature` with transitive requirement closure, the `multitenancy` alias,
+  marker-aware safe overwrites, generated feature plans and a non-executed
+  tenancy migration warning plan that never mutates data.
+- ADR-0010 (generator profiles, physical feature pruning and safe evolution).
+
 ## [0.7.0] - 2026-08-03
 
 ### Added

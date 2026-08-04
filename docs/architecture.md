@@ -243,6 +243,57 @@ sirven archivos de tenant y cómo se envían correos de forma fiable* (spec
   reintentos de los jobs la gestione. Los logs **nunca** incluyen cuerpos
   (solo to/template/dedupe/subject).
 
+## Generador (Fase 8)
+
+El generador es tooling independiente para crear proyectos con un conjunto de
+capacidades explícito y evolucionarlos sin esconder dependencias detrás de
+feature flags. Ver [ADR-0010](decisions/0010-generator-profiles-features.md).
+
+- **Catálogo y perfiles:** `generator/src/features.ts` y
+  `generator/src/profiles.ts` son la fuente TypeScript; los manifiestos
+  versionados `generator/features.json` y `generator/profiles.json` se
+  sincronizan con `sync-manifests.ts`. El catálogo contiene 12 features:
+  `persistence`, `auth`, `authorization`, `tenancy`, `audit`, `apiKeys`,
+  `jobs`, `webhooks`, `files`, `notifications`, `observability` y
+  `dynamicRoles`. Los perfiles son `minimal` (ninguna), `data-api`
+  (`persistence`), `authenticated` (`persistence` + `auth` +
+  `authorization`), `multi-tenant` (añade tenancy, audit, API keys, jobs,
+  webhooks, files y notifications) y `platform` (multi-tenant +
+  `observability`; no incluye `dynamicRoles`). `dynamicRoles` sigue diferido
+  y es incompatible con `authorization`.
+- **Validación:** `generator:validate` rechaza features o perfiles
+  desconocidos, ids duplicados, requisitos ausentes y conflictos declarados
+  mediante `excludedBy`. La graph de requisitos incluye, entre otras,
+  `authorization → auth`, `tenancy → auth`, `audit → persistence`,
+  `apiKeys → tenancy`, `jobs → persistence`, `webhooks → tenancy + jobs`,
+  `files → tenancy`, `notifications → jobs` y `dynamicRoles → tenancy`.
+- **`create:project`:** resuelve un perfil y poda físicamente módulos,
+  paquetes, migraciones, snapshots y tests de aplicación que no pertenecen a
+  las features seleccionadas. También reescribe dependencias, configuración
+  de Drizzle y entorno, filtra y renumera `_journal.json`, elige variantes de
+  las plantillas de app/rutas y escribe `GENERATED.md`. La copia excluye
+  `.git`, `node_modules`, `.codegraph`, `.atl`, `generator` y el archivo de
+  especificación externo.
+- **Plantillas:** las variantes de `app.ts` y `routes.ts` son copias manuales
+  mantenidas para cada composición; llevan un marcador del generador. No se
+  resuelven en el typecheck del paquete standalone, por lo que se cubren con
+  scans de imports y pruebas e2e.
+- **`create:module`:** genera scaffolds con scope `global`, `user` o `tenant`;
+  `--crud`, `--events` y `--audit` controlan CRUD, eventos de dominio y el
+  seam de auditoría best-effort. Los scopes de usuario y tenant propagan
+  `userId` u `organizationId`.
+- **`add:feature`:** lee `GENERATED.md`, acepta `multitenancy` como alias de
+  `tenancy`, calcula el cierre transitivo con `--with-requires`, copia
+  recursos físicos y reescribe dependencias, configuración, entorno y el
+  journal. Protege archivos custom o sin marcador salvo con `--force`, genera
+  `FEATURE_PLAN.md` y hace no-op si la feature ya está habilitada. Al añadir
+  tenancy muestra una advertencia y un plan manual de migración (tablas,
+  `organization_id`, backfill, índices/constraints y pruebas IDOR/aislamiento);
+  nunca cambia datos automáticamente.
+- **Instalación:** los proyectos generados requieren `bun install`; el
+  generador no edita `bun.lock`. La integración de proveedores como S3/R2/
+  MinIO o SMTP queda para el wiring de cada proyecto.
+
 ## Perfiles y fases futuras (resumen)
 
 - **Fase 0+1 (completada):** fundación — registros, ADRs, núcleo HTTP con rutas base, OpenAPI 3.1 + Scalar, módulo de ejemplo, Docker y CI de 5 jobs.
@@ -252,7 +303,8 @@ sirven archivos de tenant y cómo se envían correos de forma fiable* (spec
 - **Fase 5 (completada, multi-tenancy):** `modules/organizations` (organizaciones/membresías/invitaciones, migración 0004) con shared schema; roles de org predefinidos (owner/admin/auditor/member); `TenantContext` + flujo de resolución con `x-organization-id`; repositorios tenant-scoped con protección IDOR; ciclo de vida completo (crear/invitar/aceptar/transferir/suspender/eliminar miembro/borrar con confirmación) e invariantes (§11.8); auditoría por tenant sobre `packages/audit` y ADR-0007. Ver [Multi-tenancy (Fase 5)](#multi-tenancy-fase-5).
 - **Fase 6 (completada, integraciones):** outbox transaccional + eventos de dominio (migración 0005), `modules/jobs` con la JobQueue (adaptador PostgreSQL; in-memory solo para tests) + outbox worker con backoff/dead-letter/reproceso (migración 0006), API keys por organización con almacenamiento solo-hash (migración 0007), webhooks salientes firmados con HMAC (migración 0008) y webhooks entrantes verify-first con dedupe por provider+event id (migración 0009). Ver [Integraciones (Fase 6)](#integraciones-fase-6) y ADR-0008.
 - **Fase 7 (completada, archivos y notificaciones):** `modules/files` con la abstracción `FileStorage` (adaptadores en memoria y filesystem local), tabla `files` de solo referencias (migración 0010, tenant-scoped, sha256, allowlist de MIME, tope 10 MiB), URLs de descarga firmadas con HMAC (ruta pública por token) y soft-delete con `MembershipGuard` inyectado; `modules/notifications` con interfaces `Mailer`/`NotificationChannel`/`TemplateRenderer` (sin acoplamiento a proveedor), plantillas versionadas con fallback es, ledger de dedupe `sent_mails` (migración 0011) y envío asíncrono vía JobQueue. Ver [Archivos y notificaciones (Fase 7)](#archivos-y-notificaciones-fase-7) y ADR-0009.
-- **Fase 8 (generador):** siguiente fase planificada — perfiles, features, create project/add feature/create module; además se prevé crecimiento hacia rutas HTTP del módulo `notes` y más módulos de negocio bajo `/api/v1`, junto con la revisión de decisiones que lo requieran (p.ej. manejo de secretos, gate de capas automatizado).
+- **Fase 8 (completada, generador):** catálogo declarativo de features y perfiles, validación, `create:project` con poda física y cirugía del journal, `create:module` con scopes y flags, y `add:feature` con cierre de requisitos, alias, protección por marcadores y plan manual para tenancy. Ver [Generador (Fase 8)](#generador-fase-8) y ADR-0010.
+- **Fase 9 (siguiente, kits de integración frontend):** kits para TanStack, Next, Ignite, Tauri, n8n y Python.
 - **Perfil Docker `core`:** solo el servicio `api`. La base de datos vive en el perfil `database` (postgres) y no es un requisito del servidor HTTP.
 
 ## Modelo de datos y errores
