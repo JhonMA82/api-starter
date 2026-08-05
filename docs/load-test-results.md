@@ -1,4 +1,4 @@
-# Resultados de la prueba de carga (WU3, Fase 10)
+# Resultados de la prueba de carga
 
 Fecha: 2026-08-03. Herramienta: `scripts/load-test.ts` (Bun only, sin
 dependencias). Servidor: `@consulting/api` en localhost.

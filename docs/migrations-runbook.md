@@ -1,7 +1,7 @@
 # Runbook de migraciones
 
 Guía operativa para crear, aplicar y revisar migraciones de base de datos con
-Drizzle + postgres.js (Fase 2). Ver ADR-0005 para la decisión técnica.
+Drizzle + postgres.js. Ver ADR-0005 para la decisión técnica.
 
 ## Flujo local (quick path)
 

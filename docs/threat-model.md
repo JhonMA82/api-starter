@@ -1,10 +1,10 @@
 # Modelo de amenazas
 
-Fecha: 3 de agosto de 2026 (Fase 10, WU1 — hardening).
+Fecha: 3 de agosto de 2026.
 
 Alcance: el starter (`apps/api`, `packages/*`, `modules/*`, CI, config). Documenta las
-amenazas del espec §20.1, el estado de los controles obligatorios §20.2, la política de
-soporte administrativo §20.3 y el tratamiento de datos personales §20.4. El generador
+amenazas y su mitigación actual, el estado de los controles obligatorios, la política de
+soporte administrativo y el tratamiento de datos personales. El generador
 (`generator/`) queda fuera del modelo de amenazas de runtime; los proyectos generados
 heredan este documento solo si seleccionan las features correspondientes.
 
@@ -15,9 +15,9 @@ Estados: `mitigada`, `parcialmente mitigada`, `diferida` (con dueño/próximo pa
 
 ## Modelo de amenazas
 
-| Amenaza (§20.1) | Superficie | Prob. | Impacto | Mitigaciones actuales | Riesgo residual | Estado |
+| Amenaza | Superficie | Prob. | Impacto | Mitigaciones actuales | Riesgo residual | Estado |
 |---|---|---|---|---|---|---|
-| Robo de sesión | `/api/auth/*`, cookies de sesión, bearer tokens | Media | Alto | Cookies `HttpOnly`, `SameSite=Lax`, `Secure` bajo HTTPS (`apps/api/tests/auth.test.ts:74-84, 259-311`); origin check de Better Auth con `trustedOrigins` y `disableOriginCheck: false` (`packages/auth/src/auth.ts:19-27`); sesiones revocables (`revoke-session`, `auth.test.ts:232-239`); secreto mínimo 32 chars (`packages/config/src/env.ts:20`); kits SDK con almacenes seguros inyectados (Fase 9) | Robo del bearer token en almacenes inseguros del cliente; no hay rotación automática de sesiones | Mitigada |
+| Robo de sesión | `/api/auth/*`, cookies de sesión, bearer tokens | Media | Alto | Cookies `HttpOnly`, `SameSite=Lax`, `Secure` bajo HTTPS (`apps/api/tests/auth.test.ts:74-84, 259-311`); origin check de Better Auth con `trustedOrigins` y `disableOriginCheck: false` (`packages/auth/src/auth.ts:19-27`); sesiones revocables (`revoke-session`, `auth.test.ts:232-239`); secreto mínimo 32 chars (`packages/config/src/env.ts:20`); kits SDK con almacenes seguros inyectados | Robo del bearer token en almacenes inseguros del cliente; no hay rotación automática de sesiones | Mitigada |
 | CSRF | Mutaciones autenticadas por cookie (`/api/v1/*` POST/DELETE) | Baja | Alto | Cookies `SameSite=Lax` bloquean envíos cross-site; origin check en `/api/auth/*` (403 `INVALID_ORIGIN`, `auth.test.ts:270-273`); allowlist CORS niega lecturas cross-origin (`apps/api/src/app.ts:64`, `apps/api/tests/app.test.ts:76-96`) | Sin token CSRF propio; si el frontend se sirve desde otro site, SameSite no cubre GET con efectos o embeds | Parcialmente mitigada (diferido: token de doble envío — ver Prioridades) |
 | XSS reflejado vía errores | Respuestas de error y validación | Baja | Medio | Todo error es `application/problem+json` sin HTML (`apps/api/src/http/errors.ts:5, 22-33`); `detail` genérico en 500; `code`/`title`/`requestId`/`instance` acotados (`packages/core/src/problem.ts:39-48`); `/docs` es estático; nombres de archivo saneados y servidos con `attachment` (`modules/files/src/domain/file.entity.ts:46-60`, `modules/files/src/http/file.routes.ts:318-324`) | Rendering inseguro del `detail` en frontends externos (responsabilidad del cliente) | Mitigada |
 | IDOR | Recursos de tenant (`/api/v1/files`, organizaciones, API keys, webhooks) | Media | Alto | Repositorios tenant-scoped con `{organizationId, id}` (`modules/organizations/src/infrastructure/api-key.repository.ts:35-46`); middleware de tenant resuelve membresía antes del handler (`modules/organizations/src/http/tenant-middleware.ts:36-50`); 404 para archivos ajenos sin filtrar existencia (`apps/api/tests/files-routes-db.test.ts:239-282`); invitaciones por hash de token, nunca por id desnudo | Errores de implementación futura; mitigado por tests IDOR e invariantes | Mitigada |
@@ -30,10 +30,10 @@ Estados: `mitigada`, `parcialmente mitigada`, `diferida` (con dueño/próximo pa
 | Subida de archivos | `POST /api/v1/files` | Media | Medio | Allowlist MIME (`modules/files/src/domain/file.entity.ts:22-29`); tope de 10 MiB en la ruta con 413 (`modules/files/src/http/file.routes.ts`, fix de este WU); nombres saneados (basename, sin controles, máx. 200); sha256 del contenido; clave de almacenamiento generada por el servidor; soft-delete; nunca se sirven bytes desde el proceso (descarga por token firmado) | El runtime resuelve el tipo MIME de la parte por la extensión del nombre (quirk de Bun), no por la cabecera declarada; sin validación de magic bytes | Mitigada (residual: validación de contenido diferida) |
 | Abuso de endpoints públicos | `/health`, `/ready`, `/version`, `/openapi.json`, `/docs`, webhook entrante, `GET /files/download` | Alta | Medio | `bodyLimit` 1 MiB global con excepción de subida (`apps/api/src/app.ts:65`) + `timeout` 10 s (`app.ts:66`); descarga y webhook protegidos por firma/token con expiración | Sin rate limiting ni captcha; abuso/DoS de bajo costo sobre rutas públicas | Parcialmente mitigada (diferido: rate limiting — ver Prioridades) |
 | Exportación masiva | Endpoints de listado | Baja | Medio | No existe endpoint de exportación; listados paginados y acotados (`file.routes.ts:244-248` limit 1-100; auditoría ≤ 1000, `packages/audit/src/audit-logger.ts:57-63`) | Futuro endpoint de exportación debe exigir permiso, rate limiting y auditoría (política en Prioridades) | No aplicable hoy (política para futuros exports) |
-| Acciones de soporte | Sin superficie | Baja | Alto | No existe impersonación, soporte ni admin global en el starter (hermético por defecto: rutas de organizaciones/archivos solo se montan si se cablean, `apps/api/src/routes.ts:172-227`) | Si se añade superficie sin los controles §20.3 | No aplicable (política en §20.3) |
+| Acciones de soporte | Sin superficie | Baja | Alto | No existe impersonación, soporte ni admin global en el starter (hermético por defecto: rutas de organizaciones/archivos solo se montan si se cablean, `apps/api/src/routes.ts:172-227`) | Si se añade superficie sin la política de soporte | No aplicable (política en la sección de soporte) |
 | Inyección de prompts en herramientas IA | Sin herramientas IA | Baja | Alto | No hay integraciones de IA en el starter (no se ejecuta código ni queries a partir de texto externo) | Futuras herramientas deben tratar el input del modelo como no confiable y ejecutar acciones solo con consentimiento explícito | No aplicable (política: ver riesgo residual) |
 
-## Controles obligatorios (20.2)
+## Controles obligatorios
 
 | Control | Estado | Evidencia |
 |---|---|---|
@@ -63,8 +63,8 @@ Estados: `mitigada`, `parcialmente mitigada`, `diferida` (con dueño/próximo pa
 **Estado actual:** no existe superficie de soporte — sin impersonación, sin acciones de
 soporte ni admin global. Las rutas de organizaciones, archivos y webhooks entrantes solo
 se montan si la aplicación las cablea explícitamente (`apps/api/src/routes.ts:172-227`),
-y aun así no existe ningún rol global. Esto cumple la parte de "disabled by default" del
-spec §20.3.
+y aun así no existe ningún rol global. Esto cumple la parte de "disabled by default" de la
+política de soporte.
 
 **Política (se aplica si se añade soporte en el futuro):** cualquier superficie de
 impersonación/soporte/admin global debe cumplir, sin excepción:
@@ -108,15 +108,15 @@ Orden sugerido de remediación (esfuerzo aproximado):
    detección de contenido (el runtime decide el tipo por extensión del nombre; los
    archivos se sirven como `attachment`, pero el contenido real no se verifica).
 6. **Retención de auditoría y logs (M)** — política + job de retención (también cierra
-   §20.4 retención).
+    la retención de datos personales).
 7. **SBOM (L)** — generar con syft en cada release (control 20.2 opcional).
 8. **Validación de secretos de wiring (L)** — longitud mínima para `signedUrlSecret` y
    secretos de webhook en la configuración.
 
 ## Verificación de este documento
 
-- Revisión de código de los controles §20.2 contra `apps/api/src`, `packages/*`,
-  `modules/*` (verificaciones explícitas del WU1: sin `console.log` de cuerpos/cabeceras
+- Revisión de código de los controles obligatorios contra `apps/api/src`, `packages/*`,
+  `modules/*` (verificaciones explícitas: sin `console.log` de cuerpos/cabeceras
   de autorización; sin stack traces en problemas; recursos de tenant con
   `organizationId`; la descarga pública verifica expiración del token; el webhook
   entrante verifica la firma antes de parsear; sin valores de `.env` en archivos

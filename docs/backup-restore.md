@@ -1,7 +1,7 @@
 # Backup y restauración de PostgreSQL
 
 Runbook operativo del starter para volcar, restaurar y **probar** los backups
-de la base de datos (Fase 10, WU4; cierra el control §20.2 "backups probados").
+de la base de datos (cierra el control "backups probados" del modelo de amenazas).
 Los scripts son `bun run db:backup` / `bun run db:restore`, con formato
 custom de `pg_dump` y un contrato de seguridad: la contraseña viaja por la
 variable `PGPASSWORD` y **nunca** aparece en argv, logs ni salida.
@@ -80,7 +80,7 @@ El volumen `api-pg-data` de `db:up`/compose se conserva en `db:down`; los
 backups deben vivir **fuera** del contenedor y del árbol del repo (la carpeta
 `backups/` está excluida del contexto docker, pero no de git).
 
-## Backups probados (§20.2) — drill de verificación
+## Backups probados — drill de verificación
 
 Un backup que nunca se restauró no es un backup. Verificación mínima
 periódica (al menos 1 vez al mes):
