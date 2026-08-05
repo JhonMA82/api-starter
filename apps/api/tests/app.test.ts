@@ -11,7 +11,7 @@ import { createApp } from "../src/app";
 
 const config: Config = {
   APP_ENV: "test",
-  APP_VERSION: "0.1.0",
+  APP_VERSION: "0.10.1",
   API_BASE_URL: "http://localhost:3000",
   LOG_LEVEL: "debug",
   PORT: 3000,
@@ -43,7 +43,7 @@ describe("health check", () => {
     expect(entry.level).toBe("info");
     expect(entry.service).toBe("@consulting/api");
     expect(entry.environment).toBe("test");
-    expect(entry.version).toBe("0.1.0");
+    expect(entry.version).toBe("0.10.1");
     expect(entry.requestId).toBeString();
     expect(entry.requestId).not.toBe("");
     expect(entry.route).toBe("GET /health");
@@ -67,7 +67,7 @@ describe("base routes", () => {
     VersionResponse.parse(body);
     expect(body).toEqual({
       name: "@consulting/api",
-      version: "0.1.0",
+      version: "0.10.1",
       environment: "test",
     });
   });

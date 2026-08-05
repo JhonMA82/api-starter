@@ -32,15 +32,15 @@ describe("VersionResponse", () => {
     expect(
       VersionResponse.parse({
         name: "@consulting/api",
-        version: "0.1.0",
+        version: "0.10.1",
         environment: "development",
       }),
-    ).toEqual({ name: "@consulting/api", version: "0.1.0", environment: "development" });
+    ).toEqual({ name: "@consulting/api", version: "0.10.1", environment: "development" });
   });
 
   test("rejects an invalid environment", () => {
     expect(() =>
-      VersionResponse.parse({ name: "@consulting/api", version: "0.1.0", environment: "prod" }),
+      VersionResponse.parse({ name: "@consulting/api", version: "0.10.1", environment: "prod" }),
     ).toThrow();
   });
 });

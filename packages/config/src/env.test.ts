@@ -4,7 +4,7 @@ import { ConfigError, envSchema, parseEnv } from "./env";
 
 const validEnv = {
   APP_ENV: "development",
-  APP_VERSION: "0.1.0",
+  APP_VERSION: "0.10.1",
   API_BASE_URL: "http://localhost:3000",
   LOG_LEVEL: "info",
   PORT: "3000",
@@ -20,7 +20,7 @@ describe("parseEnv", () => {
     const config = parseEnv(validEnv);
     expect(config).toEqual({
       APP_ENV: "development",
-      APP_VERSION: "0.1.0",
+      APP_VERSION: "0.10.1",
       API_BASE_URL: "http://localhost:3000",
       LOG_LEVEL: "info",
       PORT: 3000,

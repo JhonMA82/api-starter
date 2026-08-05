@@ -140,8 +140,8 @@ DATABASE_URL=postgres://postgres:postgres@localhost:5432/api bun test --parallel
 ## Docker
 
 ```bash
-docker build -t consulting-api:0.10.0 .
-docker run --rm -e LOG_LEVEL=info -p 3000:3000 consulting-api:0.10.0
+docker build -t consulting-api:0.10.1 .
+docker run --rm -e LOG_LEVEL=info -p 3000:3000 consulting-api:0.10.1
 ```
 
 Imagen multi-stage sobre `oven/bun:1.3.14-slim`, ejecuta como usuario no-root y expone healthcheck contra `/health`. Perfiles de Docker Compose:

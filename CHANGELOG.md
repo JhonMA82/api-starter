@@ -5,6 +5,24 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.10.1] - 2026-08-05
+
+### Changed
+
+- Documentation: rewrote `README.md` as a concise user guide (quickstart,
+  commands, endpoints, repo structure) and `docs/architecture.md` as an
+  architecture + capability catalog; removed phase jargon ("Fase X", "spec §"
+  references to the untracked spec) and corrected the `DATABASE_URL` note
+  (the server starts without a database; auth routes and persistence modules
+  need it). Cleaned up `docs/threat-model.md`, `docs/backup-restore.md`,
+  `docs/load-test-results.md` and `docs/migrations-runbook.md`.
+- Moved the original spec `OPENCODE_HONO_BACKEND_REUTILIZABLE.md` under
+  `docs/` and linked it from the README documentation index.
+- `.gitignore`: ignore local tooling directories (`.codegraph/`, `.atl/`).
+- Version bump: aligned all workspace manifests (17 `package.json` files),
+  `.env.example`, `.env.test.example`, the `APP_VERSION` default in
+  `packages/config` and the Docker `IMAGE_VERSION` default to `0.10.1`.
+
 ## [0.10.0] - 2026-08-03
 
 ### Added
