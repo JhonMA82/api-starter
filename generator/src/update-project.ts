@@ -1,18 +1,20 @@
-import { execSync } from "node:child_process";
 import { copyFileSync, existsSync, mkdirSync, readFileSync, rmSync, statSync } from "node:fs";
 import path from "node:path";
-
+import { resolveUpdatePath } from "../updates/registry";
+import { applyFileOperation } from "./file-strategies";
 import { hashFileContent } from "./hashing";
 import { readManifest, writeManifest } from "./manifest";
 import { cleanupTempDir, materializeToTemp } from "./materialize";
 import { planFeatureSet } from "./plan";
+import { resolveTargetVersion } from "./starter-version";
 import { buildUpdatePlan } from "./update-plan";
+import { runPostValidations } from "./validate-post";
 
-const USAGE = `usage: bun generator/src/update-project.ts --project <dir> --to <version> [--apply] [--json]`;
+const USAGE = `usage: bun generator/src/update-project.ts --project <dir> [--to <version>] [--apply] [--json]`;
 
 function parseArgs(args: readonly string[]): {
   project: string;
-  to: string;
+  to: string | undefined;
   apply: boolean;
   asJson: boolean;
 } {
@@ -41,26 +43,26 @@ function parseArgs(args: readonly string[]): {
       process.exit(2);
     }
   }
-  if (!to) {
-    console.error(`--to is required\n${USAGE}`);
-    process.exit(2);
-  }
   return { project: path.resolve(project), to, apply, asJson };
 }
 
-function runPostValidations(projectDir: string): { ok: boolean; error?: string } {
+function main(): void {
+  const { project, to: userTo, apply, asJson } = parseArgs(process.argv.slice(2));
+
+  let canonical: string;
   try {
-    execSync("bun x tsc --noEmit", { cwd: projectDir, stdio: "pipe", timeout: 30_000 });
+    canonical = resolveTargetVersion(userTo);
   } catch (error) {
     const msg = error instanceof Error ? error.message : String(error);
-    return { ok: false, error: `typecheck failed: ${msg}` };
+    const toForOutput = userTo ?? "(none)";
+    if (asJson) {
+      console.log(JSON.stringify({ project, to: toForOutput, valid: false, error: msg }, null, 2));
+    } else {
+      console.error(`error: ${msg}`);
+    }
+    process.exit(1);
   }
-  // Optionally run tests if they exist and are quick; for now, just typecheck
-  return { ok: true };
-}
-
-function main(): void {
-  const { project, to, apply, asJson } = parseArgs(process.argv.slice(2));
+  const to = canonical;
 
   let manifest: ReturnType<typeof readManifest>;
   try {
@@ -75,6 +77,15 @@ function main(): void {
     process.exit(1);
   }
 
+  // Resolve registry path early to fail before materializing if possible
+  let updatePath: ReturnType<typeof resolveUpdatePath> = [];
+  let pathError: string | null = null;
+  try {
+    updatePath = resolveUpdatePath(manifest.starter.version, canonical);
+  } catch (error) {
+    pathError = error instanceof Error ? error.message : String(error);
+  }
+
   let canonicalDir: string | null = null;
   try {
     const plan = planFeatureSet(manifest.generation.features, manifest.generation.profile);
@@ -82,44 +93,86 @@ function main(): void {
     const updatePlan = buildUpdatePlan(project, manifest, canonicalDir);
 
     const conflicts = updatePlan.files.filter((f) => f.classification === "conflict");
+    const manualMigrations = updatePlan.files.filter(
+      (f) => f.classification === "manual-migration",
+    );
     const safeOps = updatePlan.files.filter((f) =>
       ["add", "update-safe", "remove-safe"].includes(f.classification),
     );
+    const requiresManual = updatePath.some((u) => (u.requiresManual?.length ?? 0) > 0);
+    const hasPathError = pathError !== null;
+    const blocking =
+      conflicts.length > 0 || manualMigrations.length > 0 || requiresManual || hasPathError;
 
     if (asJson) {
-      const output = {
+      const output: Record<string, unknown> = {
         project,
         to,
         fromVersion: manifest.starter.version,
-        toVersion: to,
+        toVersion: canonical,
         apply,
-        valid: conflicts.length === 0,
+        valid: !blocking && safeOps.length >= 0,
         files: updatePlan.files.map((f) => ({
           path: f.path,
           classification: f.classification,
           reason: f.reason,
           strategy: f.strategy,
         })),
+        updatePath: updatePath.map((u) => ({
+          id: u.id,
+          from: u.from,
+          to: u.to,
+          breakingNotes: u.breakingNotes,
+          requiresManual: u.requiresManual,
+          postValidations: u.postValidations,
+        })),
       };
+      if (pathError) (output as Record<string, unknown>).error = pathError;
+      if (requiresManual)
+        (output as Record<string, unknown>).requiresManual = updatePath.flatMap(
+          (u) => u.requiresManual ?? [],
+        );
+      if (manualMigrations.length > 0)
+        (output as Record<string, unknown>).manualMigrations = manualMigrations.map((f) => f.path);
       console.log(JSON.stringify(output, null, 2));
       if (!apply) {
-        process.exit(conflicts.length > 0 ? 1 : 0);
-      }
-      if (conflicts.length > 0 && apply) {
-        // Still exit 1 if conflicts and apply, but we already printed json
-        // The actual apply will be blocked below
+        process.exit(blocking ? 1 : 0);
       }
     } else {
       if (!apply) {
-        console.log(`update (dry-run): ${project} (${manifest.starter.version} → ${to})`);
-        console.log(`safe operations: ${safeOps.length}, conflicts: ${conflicts.length}`);
-        for (const file of updatePlan.files) {
-          if (["add", "update-safe", "remove-safe", "conflict"].includes(file.classification)) {
-            console.log(`  ${file.classification}: ${file.path} — ${file.reason}`);
+        console.log(`update (dry-run): ${project} (${manifest.starter.version} → ${canonical})`);
+        if (pathError) console.log(`update path error: ${pathError}`);
+        if (updatePath.length > 0) {
+          console.log(`update path: ${updatePath.map((u) => u.id).join(" -> ")}`);
+          for (const u of updatePath) {
+            if (u.breakingNotes) console.log(`  breaking: ${u.id}: ${u.breakingNotes}`);
+            if (u.requiresManual?.length)
+              console.log(`  manual: ${u.id}: ${u.requiresManual.join(", ")}`);
+            if (u.postValidations?.length)
+              console.log(`  validations: ${u.id}: ${u.postValidations.join(", ")}`);
           }
         }
-        if (conflicts.length > 0) {
-          console.log("\nconflicts detected: not applying without resolution");
+        console.log(
+          `safe operations: ${safeOps.length}, conflicts: ${conflicts.length}, manual-migrations: ${manualMigrations.length}`,
+        );
+        for (const file of updatePlan.files) {
+          if (
+            ["add", "update-safe", "remove-safe", "conflict", "manual-migration"].includes(
+              file.classification,
+            )
+          ) {
+            console.log(
+              `  ${file.classification}: ${file.path} — ${file.reason} [${file.strategy}]`,
+            );
+          }
+        }
+        if (blocking) {
+          if (pathError) console.log(`\nupdate path error: ${pathError}`);
+          if (requiresManual) console.log("\nmanual steps required: not applying");
+          if (manualMigrations.length > 0)
+            console.log("\nmanual migrations detected: not applying");
+          if (conflicts.length > 0)
+            console.log("\nconflicts detected: not applying without resolution");
         } else if (safeOps.length === 0) {
           console.log("\nno changes to apply");
         }
@@ -127,15 +180,26 @@ function main(): void {
     }
 
     if (!apply) {
-      process.exit(conflicts.length > 0 ? 1 : 0);
+      process.exit(blocking ? 1 : 0);
     }
 
     // --apply path
-    if (conflicts.length > 0) {
+    if (blocking) {
       if (!asJson) {
-        console.error(`error: ${conflicts.length} conflict(s) detected; not applying`);
-        for (const c of conflicts) {
-          console.error(`  conflict: ${c.path} — ${c.reason}`);
+        if (pathError) console.error(`error: update path error: ${pathError}`);
+        if (requiresManual) {
+          console.error(`error: manual steps required:`);
+          for (const u of updatePath)
+            if (u.requiresManual?.length)
+              console.error(`  ${u.id}: ${u.requiresManual.join(", ")}`);
+        }
+        if (manualMigrations.length > 0) {
+          console.error(`error: manual-migration files detected:`);
+          for (const m of manualMigrations) console.error(`  ${m.path} — ${m.reason}`);
+        }
+        if (conflicts.length > 0) {
+          console.error(`error: ${conflicts.length} conflict(s) detected; not applying`);
+          for (const c of conflicts) console.error(`  conflict: ${c.path} — ${c.reason}`);
         }
       }
       process.exit(1);
@@ -145,7 +209,9 @@ function main(): void {
       if (!asJson) {
         console.log("no changes to apply; already up to date");
       }
-      // Still update manifest's updatedAt? No, idempotent second run should do no writes
+      // Idempotent: no manifest bump, no writes
+      // But if updatePath empty and from!==to, that case already blocked by pathError/downgrade
+      // If from===to, we are idempotent
       process.exit(0);
     }
 
@@ -165,13 +231,17 @@ function main(): void {
         const canonicalPath = path.join(canonicalDir, op.path);
 
         if (op.classification === "add") {
-          // Backup not needed for add (was not existing), but record for rollback (delete on rollback)
           backedUp.push({ path: op.path, backupPath: null, wasNew: true });
           mkdirSync(path.dirname(projectPath), { recursive: true });
-          copyFileSync(canonicalPath, projectPath);
-          if (!asJson) {
-            console.log(`  add: ${op.path}`);
+          // For add, use dispatcher if structured? But add with structured not possible (should be conflict). So copy.
+          if (op.strategy === "structured") {
+            // Still need to copy but via dispatcher would fail because project file doesn't exist yet.
+            // For add, just copy canonical
+            copyFileSync(canonicalPath, projectPath);
+          } else {
+            copyFileSync(canonicalPath, projectPath);
           }
+          if (!asJson) console.log(`  add: ${op.path}`);
         } else if (op.classification === "update-safe") {
           const backupPath = path.join(backupDir, op.path);
           mkdirSync(path.dirname(backupPath), { recursive: true });
@@ -179,12 +249,12 @@ function main(): void {
             copyFileSync(projectPath, backupPath);
           }
           backedUp.push({ path: op.path, backupPath, wasNew: false });
-          // For structured files, we should do a merge, but for now just copy
-          // TODO: use file-strategies merge for package.json etc.
-          copyFileSync(canonicalPath, projectPath);
-          if (!asJson) {
-            console.log(`  update: ${op.path}`);
+          if (op.strategy === "structured") {
+            applyFileOperation({ operation: op, projectPath, canonicalPath });
+          } else {
+            copyFileSync(canonicalPath, projectPath);
           }
+          if (!asJson) console.log(`  update: ${op.path}`);
         } else if (op.classification === "remove-safe") {
           const backupPath = path.join(backupDir, op.path);
           mkdirSync(path.dirname(backupPath), { recursive: true });
@@ -192,17 +262,16 @@ function main(): void {
             copyFileSync(projectPath, backupPath);
             backedUp.push({ path: op.path, backupPath, wasNew: false });
             rmSync(projectPath, { force: true });
-            if (!asJson) {
-              console.log(`  remove: ${op.path}`);
-            }
+            if (!asJson) console.log(`  remove: ${op.path}`);
           }
         }
       }
 
-      // Post-validations
-      const validation = runPostValidations(project);
+      // Post-validations: union registry postValidations + base
+      const extraValidations = updatePath.flatMap((u) => u.postValidations ?? []);
+      const validation = runPostValidations(project, extraValidations);
       if (!validation.ok) {
-        throw new Error(validation.error ?? "post-validation failed");
+        throw new Error(validation.error ?? `post-validation ${validation.failedId} failed`);
       }
 
       // Update manifest at the end, never at the beginning
@@ -219,7 +288,7 @@ function main(): void {
               const content = readFileSync(projectPath, "utf8");
               const baselineHash = hashFileContent(content);
               const existing = manifest.managedFiles[op.path];
-              const strategy = existing?.strategy ?? "managed";
+              const strategy = existing?.strategy ?? (op.strategy as string);
               newManagedFiles[op.path] = { baselineHash, strategy };
             } catch {
               // ignore
@@ -227,22 +296,25 @@ function main(): void {
           }
         }
       }
+      const ids = updatePath.map((u) => u.id);
+      const nextApplied = [...new Set([...manifest.appliedUpdates, ...ids])];
       const updatedManifest = {
         ...manifest,
-        starter: { ...manifest.starter, version: to },
+        starter: { ...manifest.starter, version: canonical },
         generation: { ...manifest.generation, updatedAt: new Date().toISOString() },
         managedFiles: Object.fromEntries(
           Object.entries(newManagedFiles).sort(([a], [b]) => a.localeCompare(b)),
         ),
-        appliedUpdates: [...manifest.appliedUpdates, `${manifest.starter.version}->${to}`],
+        appliedUpdates: nextApplied,
       };
       writeManifest(project, updatedManifest as never);
 
       if (!asJson) {
         console.log(
-          `\nupdate applied: ${safeOps.length} file(s) updated, manifest bumped to ${to}`,
+          `\nupdate applied: ${safeOps.length} file(s) updated, manifest bumped to ${canonical}`,
         );
         console.log(`backup at: ${backupDir}`);
+        if (ids.length > 0) console.log(`applied updates: ${ids.join(", ")}`);
       }
       process.exit(0);
     } catch (error) {

@@ -1,4 +1,6 @@
-export const STARTER_VERSION = "0.11.0";
+import { getCanonicalStarterVersion } from "../src/starter-version";
+
+export const STARTER_VERSION = getCanonicalStarterVersion();
 
 export interface UpdateContext {
   manifest: import("../src/manifest").Manifest;

@@ -1,3 +1,6 @@
+import { copyFileSync, readFileSync, writeFileSync } from "node:fs";
+
+import { GenerationError } from "./errors";
 import type { FileStrategy } from "./manifest";
 
 export function getFileStrategy(relativePath: string): FileStrategy {
@@ -34,46 +37,56 @@ export function mergePackageJson(
   nextContent: string,
   managedKeys: Set<string> = new Set(["dependencies", "devDependencies"]),
 ): string {
+  let current: Record<string, unknown>;
+  let next: Record<string, unknown>;
   try {
-    const current = JSON.parse(currentContent) as Record<string, unknown>;
-    const next = JSON.parse(nextContent) as Record<string, unknown>;
-    const result: Record<string, unknown> = { ...current };
+    current = JSON.parse(currentContent) as Record<string, unknown>;
+  } catch (error) {
+    throw new GenerationError(
+      `invalid JSON in current package.json: ${error instanceof Error ? error.message : String(error)}`,
+    );
+  }
+  try {
+    next = JSON.parse(nextContent) as Record<string, unknown>;
+  } catch (error) {
+    throw new GenerationError(
+      `invalid JSON in canonical package.json: ${error instanceof Error ? error.message : String(error)}`,
+    );
+  }
+  const result: Record<string, unknown> = { ...current };
 
-    for (const key of managedKeys) {
-      if (key in next) {
-        // For dependencies, merge only @consulting/* and drizzle-* keys, preserve others
-        if (
-          (key === "dependencies" || key === "devDependencies") &&
-          typeof current[key] === "object" &&
-          typeof next[key] === "object"
-        ) {
-          const currentDeps = current[key] as Record<string, string>;
-          const nextDeps = next[key] as Record<string, string>;
-          const merged: Record<string, string> = { ...currentDeps };
-          for (const [dep, version] of Object.entries(nextDeps)) {
-            if (dep.startsWith("@consulting/") || dep === "drizzle-orm" || dep === "drizzle-kit") {
-              merged[dep] = version;
-            }
+  for (const key of managedKeys) {
+    if (key in next) {
+      // For dependencies, merge only @consulting/* and drizzle-* keys, preserve others
+      if (
+        (key === "dependencies" || key === "devDependencies") &&
+        typeof current[key] === "object" &&
+        typeof next[key] === "object"
+      ) {
+        const currentDeps = current[key] as Record<string, string>;
+        const nextDeps = next[key] as Record<string, string>;
+        const merged: Record<string, string> = { ...currentDeps };
+        for (const [dep, version] of Object.entries(nextDeps)) {
+          if (dep.startsWith("@consulting/") || dep === "drizzle-orm" || dep === "drizzle-kit") {
+            merged[dep] = version;
           }
-          // Remove deps that are no longer in next but were managed
-          for (const dep of Object.keys(currentDeps)) {
-            if (
-              (dep.startsWith("@consulting/") || dep === "drizzle-orm" || dep === "drizzle-kit") &&
-              !(dep in nextDeps)
-            ) {
-              delete merged[dep];
-            }
-          }
-          result[key] = merged;
-        } else {
-          result[key] = next[key];
         }
+        // Remove deps that are no longer in next but were managed
+        for (const dep of Object.keys(currentDeps)) {
+          if (
+            (dep.startsWith("@consulting/") || dep === "drizzle-orm" || dep === "drizzle-kit") &&
+            !(dep in nextDeps)
+          ) {
+            delete merged[dep];
+          }
+        }
+        result[key] = merged;
+      } else {
+        result[key] = next[key];
       }
     }
-    return `${JSON.stringify(result, null, 2)}\n`;
-  } catch {
-    return nextContent;
   }
+  return `${JSON.stringify(result, null, 2)}\n`;
 }
 
 // Env key-wise merge
@@ -132,4 +145,35 @@ export function mergeEnvExample(currentContent: string, nextContent: string): st
     }
   }
   return lines.join("\n");
+}
+
+export interface ApplyFileOperationOptions {
+  operation: { path: string; strategy: string; classification: string };
+  projectPath: string;
+  canonicalPath: string;
+}
+
+export function applyFileOperation(options: ApplyFileOperationOptions): void {
+  const { operation, projectPath, canonicalPath } = options;
+  if (operation.strategy === "structured") {
+    const rel = operation.path;
+    if (rel === "package.json" || rel === "apps/api/package.json") {
+      const current = readFileSync(projectPath, "utf8");
+      const next = readFileSync(canonicalPath, "utf8");
+      const merged = mergePackageJson(current, next);
+      writeFileSync(projectPath, merged, "utf8");
+      return;
+    }
+    if (rel === ".env.example") {
+      const current = readFileSync(projectPath, "utf8");
+      const next = readFileSync(canonicalPath, "utf8");
+      const merged = mergeEnvExample(current, next);
+      writeFileSync(projectPath, merged, "utf8");
+      return;
+    }
+    // Unsupported structured file – fail closed; caller should have classified as conflict
+    throw new GenerationError(`unsupported structured file ${rel}: no safe merger`);
+  }
+  // managed/scaffold/generated-region: direct copy
+  copyFileSync(canonicalPath, projectPath);
 }

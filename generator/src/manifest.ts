@@ -3,6 +3,7 @@ import path from "node:path";
 
 import { FEATURES } from "./features";
 import { PROFILES } from "./profiles";
+import { getCanonicalStarterVersion } from "./starter-version";
 import { validateFeatureSet } from "./validate";
 
 export const MANIFEST_SCHEMA_VERSION = 1;
@@ -203,16 +204,7 @@ export function writeManifest(projectDir: string, manifest: Manifest): void {
 }
 
 export function getStarterVersion(): string {
-  try {
-    const raw = readFileSync(path.join(process.cwd(), "package.json"), "utf8");
-    const pkg = JSON.parse(raw) as { version?: string };
-    if (pkg.version) {
-      return pkg.version;
-    }
-  } catch {
-    // ignore
-  }
-  return "0.0.0";
+  return getCanonicalStarterVersion();
 }
 
 export function createManifest(
@@ -221,18 +213,7 @@ export function createManifest(
   managedFiles: Record<string, ManifestFileEntry>,
 ): Manifest {
   const now = new Date().toISOString();
-  let version = "0.10.1";
-  try {
-    const pkgPath = path.resolve("package.json");
-    if (existsSync(pkgPath)) {
-      const pkg = JSON.parse(readFileSync(pkgPath, "utf8")) as { version?: string };
-      if (pkg.version) {
-        version = pkg.version;
-      }
-    }
-  } catch {
-    // ignore
-  }
+  const version = getCanonicalStarterVersion();
   const sortedFeatures = [...features].sort();
   return {
     schemaVersion: MANIFEST_SCHEMA_VERSION,

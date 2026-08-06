@@ -2,10 +2,12 @@ import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import path from "node:path";
 import { readGeneratedManifest } from "./add-feature";
 import { GenerationError } from "./errors";
+import { getFileStrategy } from "./file-strategies";
 import { hashFileContent } from "./hashing";
 import { createManifest, type ManifestFileEntry, writeManifest } from "./manifest";
 import { cleanupTempDir, materializeToTemp } from "./materialize";
 import { planFeatureSet } from "./plan";
+import { getCanonicalStarterVersion } from "./starter-version";
 import { validateFeatureSet } from "./validate";
 
 const USAGE = `usage: bun generator/src/adopt-project.ts --project <dir> --baseline <version>`;
@@ -61,6 +63,15 @@ function walkFiles(root: string, base = ""): string[] {
   return result;
 }
 
+function assertBaselineMaterializable(baseline: string): void {
+  const canonical = getCanonicalStarterVersion();
+  if (baseline !== canonical) {
+    throw new GenerationError(
+      `baseline ${baseline} is not materializable from current checkout (canonical is ${canonical}); only the current checkout version can be adopted without historical snapshots`,
+    );
+  }
+}
+
 export function adoptProject(options: AdoptOptions): { manifestPath: string; report: string } {
   const projectRoot = path.resolve(options.project);
   if (!existsSync(projectRoot) || !statSync(projectRoot).isDirectory()) {
@@ -80,6 +91,8 @@ export function adoptProject(options: AdoptOptions): { manifestPath: string; rep
       `generated manifest feature set is invalid: ${issues.map((i) => i.message).join("; ")}`,
     );
   }
+
+  assertBaselineMaterializable(options.baseline);
 
   // Materialize baseline to temp for comparison
   let baselineTemp: string | null = null;
@@ -122,14 +135,14 @@ export function adoptProject(options: AdoptOptions): { manifestPath: string; rep
       const projectContent = readFileSync(projectPath, "utf8");
       const baselineHash = hashFileContent(baselineContent);
       const projectHash = hashFileContent(projectContent);
+      const strategy = getFileStrategy(rel);
 
-      // For simplicity, treat all as managed; divergence is reported but hash is current
       if (baselineHash === projectHash) {
         intact += 1;
-        managedFiles[rel] = { baselineHash: projectHash, strategy: "managed" };
+        managedFiles[rel] = { baselineHash, strategy };
       } else {
         customized += 1;
-        managedFiles[rel] = { baselineHash: projectHash, strategy: "managed" };
+        managedFiles[rel] = { baselineHash, strategy };
         reportLines.push(`  customized: ${rel} (locally diverged from baseline)`);
       }
     }
