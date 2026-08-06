@@ -2,6 +2,7 @@
 change: doctor-diff-update-engine
 design-doc: docs/superpowers/specs/2026-08-06-doctor-diff-update-design.md
 base-ref: 1ce8cf117a18e698190c30f7c8d70ff44895c863
+archived-with: 2026-08-05-doctor-diff-update-engine
 ---
 
 # Doctor Diff Update Engine Implementation Plan

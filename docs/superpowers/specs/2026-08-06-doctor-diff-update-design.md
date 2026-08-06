@@ -2,6 +2,8 @@
 comet_change: doctor-diff-update-engine
 role: technical-design
 canonical_spec: openspec
+archived-with: 2026-08-05-doctor-diff-update-engine
+status: final
 ---
 
 # Technical Design: Doctor, Diff, Update Engine
