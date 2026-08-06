@@ -2,6 +2,8 @@
 comet_change: granular-profiles-composition
 role: technical-design
 canonical_spec: openspec
+archived-with: 2026-08-05-granular-profiles-composition
+status: final
 ---
 
 # Technical Design: Granular Profiles and Custom Composition
@@ -211,4 +213,3 @@ Additive; revert JSON + TS file to restore 5 profiles. No DB migration.
 ## Open Questions
 
 - None. Deterministic ordering is alphabetical as per validator; if team prefers dependency topological order, validator comparator can be swapped with single function change.
-

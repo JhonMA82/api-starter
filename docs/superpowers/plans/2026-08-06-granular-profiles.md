@@ -2,6 +2,7 @@
 change: granular-profiles-composition
 design-doc: docs/superpowers/specs/2026-08-06-granular-profiles-design.md
 base-ref: 71f00ca801f4fbe281440b06107dea9897276838
+archived-with: 2026-08-05-granular-profiles-composition
 ---
 
 # Granular Profiles and Custom Composition Implementation Plan
@@ -437,4 +438,3 @@ Expected: All lint/typecheck/test pass, each materialized project passes its own
 git add docs/architecture.md README.md
 git commit -m "docs: update profiles table and generation guide for granular profiles"
 ```
-
