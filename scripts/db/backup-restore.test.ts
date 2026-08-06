@@ -274,8 +274,12 @@ describe("backup/restore scripts (real database)", () => {
     }
     const tmpDir = await mkdtemp(join(tmpdir(), "db-backup-"));
     const scratchDb = `api_backup_restore_${Date.now()}`;
+    const probeTable = `backup_restore_probe_${Date.now()}`;
     const adminClient = createClient(databaseUrl as string);
     try {
+      await adminClient.unsafe(`CREATE TABLE ${probeTable} (value text NOT NULL)`);
+      await adminClient.unsafe(`INSERT INTO ${probeTable} (value) VALUES ('restored')`);
+
       const filePath = await runBackup({ outDir: tmpDir, url: databaseUrl as string }, pgDump);
 
       const backup = await stat(filePath);
@@ -300,13 +304,16 @@ describe("backup/restore scripts (real database)", () => {
       );
 
       const check = createClient(withDatabase(databaseUrl as string, scratchDb));
-      const tables = await check`
-          select table_name from information_schema.tables
-          where table_schema = 'public' and table_type = 'BASE TABLE'`;
-      expect(tables.length).toBeGreaterThan(0);
-      await check.end();
+      try {
+        const rows = await check.unsafe(`SELECT value FROM ${probeTable}`);
+        expect(rows.length).toBe(1);
+        expect(rows[0]?.value).toBe("restored");
+      } finally {
+        await check.end();
+      }
     } finally {
       await adminClient.unsafe(`DROP DATABASE IF EXISTS ${scratchDb} WITH (FORCE)`).catch(() => {});
+      await adminClient.unsafe(`DROP TABLE IF EXISTS ${probeTable}`).catch(() => {});
       await adminClient.end().catch(() => {});
       await rm(tmpDir, { recursive: true, force: true });
     }
