@@ -2,6 +2,8 @@
 comet_change: fix-generated-project-update-safety
 role: technical-design
 canonical_spec: openspec
+archived-with: 2026-08-05-fix-generated-project-update-safety
+status: final
 ---
 
 # Deep Technical Design – fix-generated-project-update-safety

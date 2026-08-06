@@ -1,3 +1,7 @@
+---
+archived-with: 2026-08-05-fix-generated-project-update-safety
+status: final
+---
 # fix-generated-project-update-safety Implementation Plan
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [x]`) syntax for tracking.
@@ -483,4 +487,3 @@ Verify no writes on dry-run, correct bump.
 - [x] **Step 2: Run `comet guard fix-generated-project-update-safety build --apply`**
 
 - [x] **Step 3: Request lightweight review (`review_mode: standard`) before verify**
-

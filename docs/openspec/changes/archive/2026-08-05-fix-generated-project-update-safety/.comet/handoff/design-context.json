@@ -1,0 +1,21 @@
+{
+  "change": "fix-generated-project-update-safety",
+  "phase": "design",
+  "mode": "compact",
+  "canonical_spec": "openspec",
+  "generated_by": "comet-handoff.sh",
+  "context_hash": "5694a6c9d8164e18bc2d36edf7f1d868ab107104694ccab59865ff171fd8eab6",
+  "files": [
+    { "path": "docs/openspec/changes/fix-generated-project-update-safety/proposal.md", "sha256": "d0f80c06f25af258169c355ab8b788c40610f92f6ccd75f92ea306ef2d629ac5" },
+    { "path": "docs/openspec/changes/fix-generated-project-update-safety/design.md", "sha256": "fef5218768133b2526dddc47c5f3ab549e998f928d7ddfa35b7cd50598676420" },
+    { "path": "docs/openspec/changes/fix-generated-project-update-safety/tasks.md", "sha256": "82f83b25bb0c7b79f11484dda7dbcf7efcba32840f69628e2ac8fba04ea4288e" },
+    { "path": "docs/openspec/changes/fix-generated-project-update-safety/specs/architecture-guardrails/spec.md", "sha256": "f3ea893ceb2fd0466def8db574ee2f6399c41b2a5de1f3958275dabd3e67a659" },
+    { "path": "docs/openspec/changes/fix-generated-project-update-safety/specs/generator-adopt/spec.md", "sha256": "f482f49842e63ab615766ca7e3b1fd2f6b3385e541b8b4eba49ebdcac7a1b1b7" },
+    { "path": "docs/openspec/changes/fix-generated-project-update-safety/specs/generator-diff/spec.md", "sha256": "e685b7df0e48f15a6514c637d4cedd6d507c7a8a5767b663d160f17ab2fd80cd" },
+    { "path": "docs/openspec/changes/fix-generated-project-update-safety/specs/generator-manifest/spec.md", "sha256": "990e149d8f1605e5b1831186d775bba0efd21fb7db43c5ffee36a48f26e7a99e" },
+    { "path": "docs/openspec/changes/fix-generated-project-update-safety/specs/generator-update/spec.md", "sha256": "11f4c02b8e8cc4b83c94af0728c59e48c3d2ecebc93d999310f3b92e9e22a614" },
+    { "path": "docs/openspec/changes/fix-generated-project-update-safety/specs/generator-updates/spec.md", "sha256": "89e4ed4195c3f5252d701a8975cff8feaa6b44f6ca3ed319ae4061ef4c7a9553" },
+    { "path": "docs/openspec/changes/fix-generated-project-update-safety/specs/generator-verification/spec.md", "sha256": "e959045b03ae9ef43fa5b568c255d6d1b5962af7e6979091598c191a9b3b28e4" },
+    { "path": "docs/openspec/changes/fix-generated-project-update-safety/specs/starter-governance/spec.md", "sha256": "9dab36c19851e408b2d6f1fba0ce1f6dd4f48e64e01207b74da204ad85135e1a" }
+  ]
+}
