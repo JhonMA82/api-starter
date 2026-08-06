@@ -101,6 +101,11 @@ jobs:
           wget --quiet -O - https://www.postgresql.org/media/keys/ACCC4CF8.asc | sudo apt-key add -
           sudo apt-get update
           sudo apt-get install -y postgresql-client-17
+      - run: |
+          echo "PG_DUMP=/usr/lib/postgresql/17/bin/pg_dump" >> $GITHUB_ENV
+          echo "PG_RESTORE=/usr/lib/postgresql/17/bin/pg_restore" >> $GITHUB_ENV
+          /usr/lib/postgresql/17/bin/pg_dump --version
+          pg_dump --version || true
       - run: bun test --parallel=1
 
   migration-test:
@@ -135,4 +140,9 @@ jobs:
           wget --quiet -O - https://www.postgresql.org/media/keys/ACCC4CF8.asc | sudo apt-key add -
           sudo apt-get update
           sudo apt-get install -y postgresql-client-17
+      - run: |
+          echo "PG_DUMP=/usr/lib/postgresql/17/bin/pg_dump" >> $GITHUB_ENV
+          echo "PG_RESTORE=/usr/lib/postgresql/17/bin/pg_restore" >> $GITHUB_ENV
+          /usr/lib/postgresql/17/bin/pg_dump --version
+          pg_dump --version || true
       - run: bun test modules/notes/tests/migrations.test.ts packages/auth/tests/auth-migrations.test.ts

@@ -18,4 +18,6 @@ coveragePathIgnorePatterns = [
   "**/modules/organizations/tests/fakes.ts",
   "**/packages/auth/src/**",
   "**/packages/audit/src/**",
+  "**/generator/**",
+  "**/scripts/**",
 ]

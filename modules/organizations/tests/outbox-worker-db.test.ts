@@ -1,4 +1,4 @@
-import { afterAll, beforeAll, describe, expect, test } from "bun:test";
+import { afterAll, beforeAll, beforeEach, describe, expect, test } from "bun:test";
 import type { Sql } from "postgres";
 
 import {
@@ -42,6 +42,10 @@ describeDb("outbox worker (real database)", () => {
   beforeAll(async () => {
     await resetDatabase(client);
     await migrateToLatest(client);
+  });
+
+  beforeEach(async () => {
+    await client.unsafe(`TRUNCATE outbox_events CASCADE`);
   });
 
   afterAll(async () => {
