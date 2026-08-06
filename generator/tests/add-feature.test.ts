@@ -294,7 +294,7 @@ describe("add-feature CLI", () => {
     const { root, project } = temporaryProject();
     try {
       const run = (args: string[]) =>
-        spawnSync("/home/juan/.bun/bin/bun", ["generator/src/add-feature.ts", ...args], {
+        spawnSync("bun", ["generator/src/add-feature.ts", ...args], {
           cwd: repoRoot,
           encoding: "utf8",
         });
