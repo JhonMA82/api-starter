@@ -11,9 +11,11 @@ import {
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
-import { GenerationError, UnknownProfileError } from "./errors";
+import { GenerationError, UnknownFeatureError, UnknownProfileError } from "./errors";
+import { FEATURES } from "./features";
 import { filterMigrationJournal } from "./migrations";
-import { type ProjectPlan, planProject } from "./plan";
+import { type ProjectPlan, planFromSelection, planProject } from "./plan";
+import { PROFILES, getProfile } from "./profiles";
 import {
   computeRemoveList,
   rewriteAppPackageJson,
@@ -26,7 +28,48 @@ import {
 } from "./prune";
 import { selectTemplates } from "./templates";
 
-const USAGE = `usage: bun generator/src/create-project.ts --profile <profile-id> --out <dir> [--force]`;
+const USAGE = `usage: bun generator/src/create-project.ts --profile <profile-id> --out <dir> [--force]
+       bun generator/src/create-project.ts --features <csv> --out <dir> [--force]
+       bun generator/src/create-project.ts --profile <profile-id> --with <csv> --out <dir> [--force]
+       bun generator/src/create-project.ts --list-profiles [--json]
+       bun generator/src/create-project.ts --list-features [--json]
+       bun generator/src/create-project.ts --help`;
+
+function printProfiles(asJson: boolean): void {
+  if (asJson) {
+    console.log(JSON.stringify(PROFILES, null, 2));
+    return;
+  }
+  for (const profile of [...PROFILES].sort((a, b) => a.id.localeCompare(b.id))) {
+    const deprecated = profile.deprecated ? " (deprecated)" : "";
+    const replacements = profile.replacementProfiles
+      ? ` -> ${profile.replacementProfiles.join(", ")}`
+      : "";
+    console.log(
+      `${profile.id.padEnd(22)} ${profile.description} [${profile.features.join(", ") || "(none)"}]${deprecated}${replacements}`,
+    );
+  }
+}
+
+function printFeatures(asJson: boolean): void {
+  if (asJson) {
+    console.log(JSON.stringify(FEATURES, null, 2));
+    return;
+  }
+  for (const feature of FEATURES) {
+    const req = feature.requires.length > 0 ? feature.requires.join(",") : "-";
+    const exc = feature.excludedBy.length > 0 ? feature.excludedBy.join(",") : "-";
+    console.log(`${feature.id.padEnd(20)} ${feature.description} requires:[${req}] excludedBy:[${exc}]`);
+  }
+}
+
+function printHelp(): void {
+  console.log(USAGE);
+  console.log("\nProfiles:");
+  printProfiles(false);
+  console.log("\nFeatures:");
+  printFeatures(false);
+}
 
 export function repositoryRoot(): string {
   return fileURLToPath(new URL("../../", import.meta.url));
@@ -69,19 +112,11 @@ function rewrite(target: string, transform: (source: string) => string): void {
   writeFileSync(target, transform(source));
 }
 
-/**
- * Materializes a new project at outDir from the profile: copies the
- * repository tree (minus tooling/local state), physically removes excluded
- * modules/packages/migrations, rewrites composition files, and installs the
- * app templates. Throws GenerationError on a non-empty existing destination
- * unless force is set (never silently overwrites).
- */
-export function generateProject(
-  profileId: string,
+export function generateProjectFromPlan(
+  plan: ProjectPlan,
   outDir: string,
   options: { force?: boolean } = {},
 ): ProjectPlan {
-  const plan = planProject(profileId);
   const repoRoot = repositoryRoot();
   const outPath = path.resolve(outDir);
 
@@ -162,6 +197,34 @@ Next steps:
   return plan;
 }
 
+/**
+ * Materializes a new project at outDir from the profile: copies the
+ * repository tree (minus tooling/local state), physically removes excluded
+ * modules/packages/migrations, rewrites composition files, and installs the
+ * app templates. Throws GenerationError on a non-empty existing destination
+ * unless force is set (never silently overwrites).
+ */
+export function generateProject(
+  profileId: string,
+  outDir: string,
+  options: { force?: boolean } = {},
+): ProjectPlan {
+  const plan = planProject(profileId);
+  if (profileId) {
+    try {
+      const p = getProfile(profileId);
+      if (p.deprecated) {
+        console.warn(
+          `⚠ Profile "${p.id}" is deprecated: ${p.deprecatedReason ?? ""} Use one of: ${p.replacementProfiles?.join(", ") ?? ""}`,
+        );
+      }
+    } catch {
+      // profile lookup failure handled by planProject above
+    }
+  }
+  return generateProjectFromPlan(plan, outDir, options);
+}
+
 function printSummary(plan: ProjectPlan, outPath: string): void {
   const lines = [
     `project materialized at ${outPath}`,
@@ -184,8 +247,14 @@ function printSummary(plan: ProjectPlan, outPath: string): void {
 function main(): void {
   const args = process.argv.slice(2);
   let profileId: string | undefined;
+  let featuresCsv: string | undefined;
+  let withCsv: string | undefined;
   let outDir: string | undefined;
   let force = false;
+  let asJson = false;
+  let listProfiles = false;
+  let listFeatures = false;
+  let help = false;
 
   for (let index = 0; index < args.length; index += 1) {
     const arg = args[index];
@@ -194,9 +263,27 @@ function main(): void {
     }
     if (arg === "--force") {
       force = true;
+    } else if (arg === "--json") {
+      asJson = true;
+    } else if (arg === "--help" || arg === "-h") {
+      help = true;
+    } else if (arg === "--list-profiles") {
+      listProfiles = true;
+    } else if (arg === "--list-features") {
+      listFeatures = true;
     } else if (arg === "--profile" || arg.startsWith("--profile=")) {
       profileId = arg === "--profile" ? args[index + 1] : arg.slice("--profile=".length);
       if (arg === "--profile") {
+        index += 1;
+      }
+    } else if (arg === "--features" || arg.startsWith("--features=")) {
+      featuresCsv = arg === "--features" ? args[index + 1] : arg.slice("--features=".length);
+      if (arg === "--features") {
+        index += 1;
+      }
+    } else if (arg === "--with" || arg.startsWith("--with=")) {
+      withCsv = arg === "--with" ? args[index + 1] : arg.slice("--with=".length);
+      if (arg === "--with") {
         index += 1;
       }
     } else if (arg === "--out" || arg.startsWith("--out=")) {
@@ -211,17 +298,63 @@ function main(): void {
     }
   }
 
-  if (profileId === undefined || outDir === undefined) {
-    console.error("error: --profile and --out are required");
+  if (help) {
+    printHelp();
+    process.exit(0);
+  }
+
+  if (listProfiles) {
+    printProfiles(asJson);
+    process.exit(0);
+  }
+
+  if (listFeatures) {
+    printFeatures(asJson);
+    process.exit(0);
+  }
+
+  if (outDir === undefined) {
+    console.error("error: --out is required");
+    console.error(USAGE);
+    process.exit(2);
+  }
+
+  const hasCustom = featuresCsv !== undefined || withCsv !== undefined;
+
+  if (!hasCustom && profileId === undefined) {
+    console.error("error: --profile or --features is required");
     console.error(USAGE);
     process.exit(2);
   }
 
   try {
-    const plan = generateProject(profileId, outDir, { force });
-    printSummary(plan, path.resolve(outDir));
+    let plan: ProjectPlan;
+    if (hasCustom) {
+      plan = planFromSelection({ profile: profileId, featuresCsv, withCsv });
+      if (profileId) {
+        try {
+          const p = getProfile(profileId);
+          if (p.deprecated) {
+            console.warn(
+              `⚠ Profile "${p.id}" is deprecated: ${p.deprecatedReason ?? ""} Use one of: ${p.replacementProfiles?.join(", ") ?? ""}`,
+            );
+          }
+        } catch {
+          // handled by planFromSelection
+        }
+      }
+      const result = generateProjectFromPlan(plan, outDir, { force });
+      printSummary(result, path.resolve(outDir));
+    } else {
+      const result = generateProject(profileId as string, outDir, { force });
+      printSummary(result, path.resolve(outDir));
+    }
   } catch (error) {
-    if (error instanceof UnknownProfileError || error instanceof GenerationError) {
+    if (
+      error instanceof UnknownProfileError ||
+      error instanceof UnknownFeatureError ||
+      error instanceof GenerationError
+    ) {
       console.error(`error: ${error.message}`);
       process.exit(1);
     }

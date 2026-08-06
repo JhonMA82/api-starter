@@ -278,7 +278,7 @@ export function closeTransitive(ids: string[]): string[] {
   const visiting = new Set<string>();
   function visit(id: string): void {
     if (visiting.has(id)) {
-      throw new Error(`cycle detected at "${id}"`);
+      throw new GenerationError(`cycle detected at "${id}"`);
     }
     visiting.add(id);
     const feature = getFeature(id);
@@ -318,15 +318,15 @@ export function planFeatureSet(features: readonly string[], profileId = "custom"
     throw new UnknownFeatureError(unknown.feature);
   }
   if (issues.length > 0) {
-    throw new Error(`feature set is invalid: ${issues.map((issue) => issue.message).join("; ")}`);
+    throw new GenerationError(`feature set is invalid: ${issues.map((issue) => issue.message).join("; ")}`);
   }
   return buildProjectPlan(profileId, closed);
 }
 
 export function planFromSelection(opts: {
-  profile?: string;
-  featuresCsv?: string;
-  withCsv?: string;
+  profile?: string | undefined;
+  featuresCsv?: string | undefined;
+  withCsv?: string | undefined;
 }): ProjectPlan {
   if (opts.featuresCsv && (opts.profile || opts.withCsv)) {
     throw new GenerationError(
