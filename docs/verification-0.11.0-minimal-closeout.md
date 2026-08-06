@@ -138,12 +138,14 @@ $ bun run db:up && DATABASE_URL=postgres://postgres:postgres@localhost:5432/api 
 
 ## 7. Enlace o identificador de la ejecución verde de GitHub Actions
 
-- Branch: `feature/20260806/granular-profiles-composition` (acoplada a `fix/close-0.11.0-validation` worktree si se usa) — push pendiente a `origin`.
+- Rama: `feature/20260806/granular-profiles-composition`.
+- Commit verificado: `be484f1 test: seed backup restore probe data`.
 - Workflow: `.github/workflows/ci.yml` con 8 jobs: `lint`, `typecheck`, `test`, `openapi-validation`, `docker-build`, `migrations-check`, `integration-test`, `migration-test`.
-- Validación local del YAML y conteo de jobs: `python yaml.safe_load` confirma 8 jobs tras el fix; antes `ParserError` impedía que GitHub reconociera el workflow.
-- Para verificación remota: tras `git push` ejecutar `gh run list --workflow=.github/workflows/ci.yml --limit 5` y `gh run view <id> --log` (requiere GH CLI autenticado). `actionlint` si está disponible: `actionlint .github/workflows/ci.yml` → 0 errores tras fix (no instalado localmente, pero YAML válido garantiza que GitHub lo acepte).
+- Ejecución verde del pull request: [GitHub Actions run 31132535604](https://github.com/JhonMA82/api-starter/actions/runs/31132535604), 8/8 jobs correctos.
+- Ejecución verde del push: [GitHub Actions run 31132532668](https://github.com/JhonMA82/api-starter/actions/runs/31132532668), 8/8 jobs correctos.
+- Pull request: [#3](https://github.com/JhonMA82/api-starter/pull/3).
 
-> **Estado al cierre de este informe**: suite local en verde salvo tests de DB (requieren postgres). Verificación remota en GitHub Actions queda pendiente de push; el YAML ya es válido y los tests nuevos garantizan que los 8 jobs podrán ejecutarse. Actualizar esta sección con run ID/url tras el primer push verde.
+> **Estado al cierre de este informe**: aceptación remota completa. Las dos ejecuciones de GitHub Actions para el commit `be484f1` finalizaron correctamente, incluidos los jobs con PostgreSQL real y la cobertura.
 
 ## 8. Hallazgos fuera de alcance
 
@@ -158,7 +160,7 @@ $ bun run db:up && DATABASE_URL=postgres://postgres:postgres@localhost:5432/api 
 - **Validación pesada en CI**: `integration-test`/`migration-test` requieren `postgres:17-alpine` con healthcheck 10s; un CI lento podría agotar `TIMEOUT 30_000` de `validate-post.ts`. Mitigación: el rollback E2E usa `lint: node -e 'process.exit(1)'` determinista (rápido), no `typecheck`/`test` pesados.
 - **Backup timestamp**: `update-project.ts` crea `\.api-starter/backups/<ISO>`; el E2E no aserta nombre exacto sino existencia/contenido, por lo que no es frágil a colisiones de timestamp.
 - **Validación omitida vs rollback**: Sin `node_modules` el rollback E2E no se dispararía; el test actual siempre crea `node_modules/.keep` y `lint` fallido, pero futuros cambios que vuelvan a skippear podrían ocultar el rollback; el test fallaría entonces y señalaría la regresión.
-- **CI verde aún no verificado remoto**: Hasta el push, la prueba es local; cualquier fallo remoto (p. ej., `docker build` o `migrations-check` por drift de `drizzle`) requerirá inspeccionar logs y corregir solo la causa comprobada sin desactivar jobs ni usar `continue-on-error`.
+- **Dependencia de infraestructura remota**: Los jobs `integration-test` y `migration-test` dependen del servicio PostgreSQL y de instalar el cliente 17. Ambos quedaron verificados en las ejecuciones verdes, pero una indisponibilidad futura de esos servicios externos todavía puede afectar CI.
 
 ---
 *Informe generado desde base `f5aedf1` con cambios mínimos verificados antes de modificar (CONFIRMADA x3).*
