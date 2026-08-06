@@ -2,6 +2,8 @@
 comet_change: close-0-11-0-minimal-validation
 role: technical-design
 canonical_spec: openspec
+archived-with: 2026-08-06-close-0-11-0-minimal-validation
+status: final
 ---
 
 # Design: close-0-11-0-minimal-validation
@@ -117,4 +119,3 @@ None blocking; structured-merge vs hash edge documented in report if hit.
 3. Add E2E `0.10.1→0.11.0` test.
 4. Add rollback test.
 5. Run full suite, push, verify CI, write closeout report.
-

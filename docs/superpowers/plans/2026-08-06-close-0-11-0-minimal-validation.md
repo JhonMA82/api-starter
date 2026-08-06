@@ -2,6 +2,7 @@
 change: close-0-11-0-minimal-validation
 design-doc: docs/superpowers/specs/2026-08-06-close-0-11-0-minimal-validation-design.md
 base-ref: f5aedf1889958df5d6f2e8625c9919f171d82278
+archived-with: 2026-08-06-close-0-11-0-minimal-validation
 ---
 
 # Plan: close-0-11-0-minimal-validation
@@ -12,7 +13,7 @@ Minimal closeout for 0.11.0 fixing CI YAML, adding authentic E2E 0.10.1→0.11.0
 ## Tasks
 
 ### 1. Baseline & Verification
-- [ ] Already done: verify A/B/C confirmed (YAML invalid, E2E weak, rollback missing). Capture baseline outputs.
+- [x] Already done: verify A/B/C confirmed (YAML invalid, E2E weak, rollback missing). Capture baseline outputs.
 
 ### 2. CI Fix
 - File: `.github/workflows/ci.yml`
