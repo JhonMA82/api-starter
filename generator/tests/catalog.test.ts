@@ -103,27 +103,78 @@ describe("profile catalog", () => {
     expect(profile("minimal")).not.toContain("persistence");
     expect(profile("minimal")).not.toContain("auth");
 
-    expect(profile("data-api")).toEqual(["persistence"]);
+    expect([...profile("data-api")].sort()).toEqual(["persistence"]);
 
     expect(profile("authenticated")).toContain("auth");
     expect(profile("authenticated")).toContain("persistence");
+    expect([...profile("authenticated")].sort()).toEqual(
+      ["auth", "authorization", "persistence"].sort(),
+    );
 
-    expect(profile("multi-tenant")).toEqual([
-      "persistence",
-      "auth",
-      "authorization",
-      "tenancy",
-      "audit",
-      "apiKeys",
-      "jobs",
-      "webhooks",
-      "files",
-      "notifications",
-    ]);
+    expect([...profile("multi-tenant")].sort()).toEqual(
+      [
+        "apiKeys",
+        "audit",
+        "auth",
+        "authorization",
+        "files",
+        "jobs",
+        "notifications",
+        "persistence",
+        "tenancy",
+        "webhooks",
+      ].sort(),
+    );
     expect(profile("multi-tenant")).toContain("tenancy");
     expect(profile("multi-tenant")).toContain("auth");
 
-    expect(profile("platform")).toEqual([...profile("multi-tenant"), "observability"]);
+    expect([...profile("multi-tenant-core")].sort()).toEqual(
+      ["audit", "auth", "authorization", "persistence", "tenancy"].sort(),
+    );
+
+    expect([...profile("integration-platform")].sort()).toEqual(
+      [
+        "apiKeys",
+        "audit",
+        "auth",
+        "authorization",
+        "jobs",
+        "persistence",
+        "tenancy",
+        "webhooks",
+      ].sort(),
+    );
+
+    expect([...profile("platform")].sort()).toEqual(
+      [...profile("multi-tenant"), "observability"].sort(),
+    );
+  });
+
+  test("deprecated multi-tenant has replacement metadata", () => {
+    const mt = getProfile("multi-tenant");
+    expect(mt.deprecated).toBe(true);
+    expect(mt.replacementProfiles).toEqual([
+      "multi-tenant-core",
+      "integration-platform",
+      "platform",
+    ]);
+    const mtc = getProfile("multi-tenant-core");
+    expect(mtc.deprecated).toBeUndefined();
+    const ip = getProfile("integration-platform");
+    expect(ip.deprecated).toBeUndefined();
+  });
+
+  test("profiles include granular set", () => {
+    const ids = PROFILES.map((p) => p.id).sort();
+    expect(ids).toEqual([
+      "authenticated",
+      "data-api",
+      "integration-platform",
+      "minimal",
+      "multi-tenant",
+      "multi-tenant-core",
+      "platform",
+    ]);
   });
 
   test("getProfile throws UnknownProfileError for unknown ids", () => {
@@ -241,7 +292,9 @@ describe("validateProfile", () => {
     const platform = validateProfile("platform");
     expect("features" in platform).toBe(true);
     if ("features" in platform) {
-      expect(platform.features).toEqual([...getProfile("multi-tenant").features, "observability"]);
+      expect([...platform.features].sort()).toEqual(
+        [...getProfile("multi-tenant").features, "observability"].sort(),
+      );
     }
   });
 });
