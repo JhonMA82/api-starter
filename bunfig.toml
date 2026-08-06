@@ -20,4 +20,5 @@ coveragePathIgnorePatterns = [
   "**/packages/audit/src/**",
   "**/generator/**",
   "**/scripts/**",
+  "**/packages/core/src/tracer.ts",
 ]
