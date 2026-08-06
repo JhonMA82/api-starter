@@ -6,7 +6,7 @@ base-ref: 71f00ca801f4fbe281440b06107dea9897276838
 
 # Granular Profiles and Custom Composition Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [x]`) syntax for tracking.
 
 **Goal:** Introduce `multi-tenant-core` and `integration-platform` curated profiles, deprecate `multi-tenant` with warning, enable custom `--features`/`--with` compositions with transitive closure, add discoverability flags, and harden catalog validation under a single pure planner.
 
@@ -37,7 +37,7 @@ base-ref: 71f00ca801f4fbe281440b06107dea9897276838
 - Consumes: Existing `ProfileDefinition` {id, description, features}
 - Produces: `ProfileDefinition` with optional `deprecated`, `deprecatedReason`, `replacementProfiles`; expanded `PROFILES` constant with 7 entries
 
-- [ ] **Step 1: Write failing test for new profiles**
+- [x] **Step 1: Write failing test for new profiles**
 
 ```ts
 // generator/tests/catalog.test.ts
@@ -53,12 +53,12 @@ test("profiles include multi-tenant-core and integration-platform and deprecated
 });
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run: `bun test generator/tests/catalog.test.ts -v`
 Expected: FAIL — missing profiles
 
-- [ ] **Step 3: Implement profile extension**
+- [x] **Step 3: Implement profile extension**
 
 ```ts
 // generator/src/profiles.ts
@@ -83,12 +83,12 @@ export const PROFILES: readonly ProfileDefinition[] = [
 
 Update `generator/profiles.json` to mirror same 7 entries (alphabetically sorted by id, features alphabetically sorted within each entry) and ensure JSON ↔ TS parity.
 
-- [ ] **Step 4: Run test to verify it passes**
+- [x] **Step 4: Run test to verify it passes**
 
 Run: `bun test generator/tests/catalog.test.ts -v`
 Expected: PASS
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add generator/src/profiles.ts generator/profiles.json generator/tests/catalog.test.ts
@@ -106,7 +106,7 @@ git commit -m "feat(generator): add multi-tenant-core, integration-platform and 
 - Consumes: `validateFeatureSet`, `getFeature`, `getProfile`, `buildProjectPlan`
 - Produces: `planFeatureSet(features, profileId?) -> ProjectPlan`, `planFromSelection(opts) -> ProjectPlan`, `closeTransitive(ids) -> string[]`, `parseCsv(csv) -> string[]`
 
-- [ ] **Step 1: Write failing test for transitive closure and ordering**
+- [x] **Step 1: Write failing test for transitive closure and ordering**
 
 ```ts
 test("planFeatureSet transitive closure includes persistence for audit", () => {
@@ -119,12 +119,12 @@ test("planFromSelection --features ambiguity rejected", () => {
 });
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run: `bun test generator/tests/catalog.test.ts -v`
 Expected: FAIL — unknown function
 
-- [ ] **Step 3: Implement plan helpers**
+- [x] **Step 3: Implement plan helpers**
 
 ```ts
 // generator/src/plan.ts additions
@@ -185,12 +185,12 @@ export function planProject(profileId: string): ProjectPlan {
 
 Ensure `buildProjectPlan` now sorts features input and produces deterministic keep*/remove*.
 
-- [ ] **Step 4: Run test to verify it passes**
+- [x] **Step 4: Run test to verify it passes**
 
 Run: `bun test generator/tests/catalog.test.ts -v`
 Expected: PASS
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add generator/src/plan.ts generator/src/errors.ts
@@ -208,7 +208,7 @@ git commit -m "feat(generator): consolidate pure planner planFeatureSet/planFrom
 - Consumes: `planFromSelection`, `PROFILES`, `FEATURES`, `GenerationError`
 - Produces: CLI with --features, --with, --list-profiles, --list-features, deprecation warning on stderr
 
-- [ ] **Step 1: Write failing test for new flags**
+- [x] **Step 1: Write failing test for new flags**
 
 ```ts
 test("--list-profiles prints all profiles deterministically", async () => {
@@ -227,12 +227,12 @@ test("deprecated multi-tenant emits warning", async () => {
 });
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run: `bun test generator/tests/create-project.test.ts -v`
 Expected: FAIL
 
-- [ ] **Step 3: Implement CLI changes**
+- [x] **Step 3: Implement CLI changes**
 
 ```ts
 // generator/src/create-project.ts excerpt
@@ -282,12 +282,12 @@ if (featuresCsv || withCsv) {
 
 Keep existing `--profile`/`--out`/`--force` handling; ambiguity validated inside `planFromSelection`.
 
-- [ ] **Step 4: Run test to verify it passes**
+- [x] **Step 4: Run test to verify it passes**
 
 Run: `bun test generator/tests/create-project.test.ts -v`
 Expected: PASS
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add generator/src/create-project.ts generator/src/list-formatters.ts generator/tests/create-project.test.ts
@@ -305,7 +305,7 @@ git commit -m "feat(generator): support --features/--with and --list-* with depr
 - Consumes: `PROFILES`, `FEATURES`, `validateFeatureSet`
 - Produces: `validateCatalog(): ValidationIssue[]` with 9 families, `cli-validate` supports --list-* and --json
 
-- [ ] **Step 1: Write failing test for catalog invalidations**
+- [x] **Step 1: Write failing test for catalog invalidations**
 
 ```ts
 test("validateCatalog rejects unsorted features", () => {
@@ -317,12 +317,12 @@ test("validateCatalog rejects platform incomplete", () => {
 });
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run: `bun test generator/tests/catalog.test.ts -v`
 Expected: FAIL
 
-- [ ] **Step 3: Implement validateCatalog**
+- [x] **Step 3: Implement validateCatalog**
 
 ```ts
 // generator/src/validate.ts additions
@@ -388,12 +388,12 @@ Update `cli-validate.ts` to:
 - support `--json` output,
 - otherwise call `validateCatalog()` and also `validateProfile(profileId)` if `--profile` given, print issues and exit 1 if any.
 
-- [ ] **Step 4: Run test to verify it passes**
+- [x] **Step 4: Run test to verify it passes**
 
 Run: `bun test generator/tests/catalog.test.ts -v` and `bun run generator:validate`
 Expected: PASS, no output means valid
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add generator/src/validate.ts generator/src/cli-validate.ts generator/tests/catalog.test.ts
@@ -407,15 +407,15 @@ git commit -m "feat(generator): harden validate with catalog-wide invariants"
 - Modify: `README.md`
 - Test: manual matrix + existing tests
 
-- [ ] **Step 1: Update docs/architecture.md profiles table**
+- [x] **Step 1: Update docs/architecture.md profiles table**
 
 Add table rows for `multi-tenant-core` and `integration-platform`, mark `multi-tenant` as deprecated with replacement note, document `--features`/`--with`.
 
-- [ ] **Step 2: Update README generation section**
+- [x] **Step 2: Update README generation section**
 
 Document new profiles and custom composition examples.
 
-- [ ] **Step 3: Run full verification matrix**
+- [x] **Step 3: Run full verification matrix**
 
 Run:
 ```bash
@@ -431,7 +431,7 @@ for p in minimal data-api authenticated multi-tenant-core integration-platform p
 
 Expected: All lint/typecheck/test pass, each materialized project passes its own checks.
 
-- [ ] **Step 4: Commit docs**
+- [x] **Step 4: Commit docs**
 
 ```bash
 git add docs/architecture.md README.md
