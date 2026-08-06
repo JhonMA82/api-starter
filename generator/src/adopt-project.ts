@@ -96,7 +96,7 @@ export function adoptProject(options: AdoptOptions): { manifestPath: string; rep
     baselineTemp = materializeToTemp(planFeatureSet(features, profile));
 
     const baselineFiles = new Set(walkFiles(baselineTemp));
-    const projectFiles = new Set(walkFiles(projectRoot));
+    const _projectFiles = new Set(walkFiles(projectRoot));
 
     const allRelevant = new Set([...baselineFiles]);
 

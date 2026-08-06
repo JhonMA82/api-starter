@@ -2,9 +2,9 @@ import { existsSync } from "node:fs";
 import path from "node:path";
 
 import { readManifest } from "./manifest";
+import { cleanupTempDir, materializeToTemp } from "./materialize";
 import { planFeatureSet } from "./plan";
 import { buildUpdatePlan } from "./update-plan";
-import { materializeToTemp, cleanupTempDir } from "./materialize";
 
 const USAGE = `usage: bun generator/src/diff-project.ts --project <dir> --to <version> [--json]`;
 
@@ -14,6 +14,9 @@ function parseArgs(args: readonly string[]): { project: string; to: string; asJs
   let asJson = false;
   for (let i = 0; i < args.length; i += 1) {
     const arg = args[i];
+    if (arg === undefined) {
+      continue;
+    }
     if (arg === "--project" || arg.startsWith("--project=")) {
       project = arg === "--project" ? (args[++i] as string) : arg.slice("--project=".length);
     } else if (arg === "--to" || arg.startsWith("--to=")) {
@@ -63,11 +66,8 @@ function main(): void {
 
   // Materialize canonical target using exactly the same features
   let canonicalDir: string | null = null;
-  let beforeHashes: Map<string, string> | null = null;
   try {
     // For diff, we materialize with current generator's logic; --to is validated as SemVer but we don't fetch remote
-    // We record before hashes to ensure we don't write
-    const { readFileSync } = require("node:fs") as typeof import("node:fs");
     const plan = planFeatureSet(manifest.generation.features, manifest.generation.profile);
     canonicalDir = materializeToTemp(plan);
 
@@ -93,16 +93,26 @@ function main(): void {
       console.log(JSON.stringify(output, null, 2));
     } else {
       console.log(`diff: ${project} (${manifest.starter.version} → ${to})`);
-      console.log(`profile: ${manifest.generation.profile}, features: ${manifest.generation.features.join(", ") || "(none)"}`);
+      console.log(
+        `profile: ${manifest.generation.profile}, features: ${manifest.generation.features.join(", ") || "(none)"}`,
+      );
       console.log("");
       const groups: Record<string, typeof updatePlan.files> = {};
       for (const file of updatePlan.files) {
         if (!groups[file.classification]) {
           groups[file.classification] = [];
         }
-        groups[file.classification].push(file);
+        groups[file.classification]?.push(file);
       }
-      for (const classification of ["add", "update-safe", "remove-safe", "conflict", "customized-no-upstream-change", "unchanged", "manual-migration"] as const) {
+      for (const classification of [
+        "add",
+        "update-safe",
+        "remove-safe",
+        "conflict",
+        "customized-no-upstream-change",
+        "unchanged",
+        "manual-migration",
+      ] as const) {
         const files = groups[classification];
         if (!files || files.length === 0) {
           continue;

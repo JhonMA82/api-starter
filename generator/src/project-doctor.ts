@@ -1,12 +1,12 @@
-import { existsSync, readFileSync, readdirSync, statSync } from "node:fs";
 import { execSync } from "node:child_process";
+import { existsSync, readFileSync } from "node:fs";
 import path from "node:path";
 
 import { hashFileContent } from "./hashing";
 import { readManifest } from "./manifest";
-import { validateFeatureSet } from "./validate";
 import { planFeatureSet } from "./plan";
 import { computeRemoveList } from "./prune";
+import { validateFeatureSet } from "./validate";
 
 export interface DoctorIssue {
   code: string;
@@ -24,7 +24,11 @@ export interface DoctorResult {
 
 function isGitDirty(projectDir: string): boolean {
   try {
-    const output = execSync("git status --porcelain", { cwd: projectDir, encoding: "utf8", stdio: "pipe" });
+    const output = execSync("git status --porcelain", {
+      cwd: projectDir,
+      encoding: "utf8",
+      stdio: "pipe",
+    });
     return output.trim().length > 0;
   } catch {
     return false;
@@ -61,7 +65,11 @@ export function doctorProject(projectDir: string): DoctorResult {
         suggestion: "commit or stash changes before running doctor",
       });
     }
-    return { project: projectDir, issues, valid: issues.filter((i) => i.severity === "error").length === 0 };
+    return {
+      project: projectDir,
+      issues,
+      valid: issues.filter((i) => i.severity === "error").length === 0,
+    };
   }
 
   let manifest: ReturnType<typeof readManifest>;
@@ -184,7 +192,8 @@ function printHuman(result: DoctorResult): void {
     return;
   }
   for (const issue of result.issues) {
-    const prefix = issue.severity === "error" ? "error" : issue.severity === "warning" ? "warning" : "info";
+    const prefix =
+      issue.severity === "error" ? "error" : issue.severity === "warning" ? "warning" : "info";
     const loc = issue.path ? ` ${issue.path}` : "";
     console.log(`${prefix} [${issue.code}]${loc}: ${issue.message}`);
     if (issue.suggestion) {
@@ -202,6 +211,9 @@ function main(): void {
   let asJson = false;
   for (let i = 0; i < args.length; i += 1) {
     const arg = args[i];
+    if (arg === undefined) {
+      continue;
+    }
     if (arg === "--project" || arg.startsWith("--project=")) {
       projectDir = arg === "--project" ? (args[++i] as string) : arg.slice("--project=".length);
     } else if (arg === "--json") {

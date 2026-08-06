@@ -1,4 +1,4 @@
-import type { Update, UpdateContext, PlannedOperation } from "./registry";
+import type { PlannedOperation, Update, UpdateContext } from "./registry";
 
 export const update: Update = {
   id: "0.10.1-to-0.11.0",
@@ -6,7 +6,8 @@ export const update: Update = {
   to: "0.11.0",
   appliesTo: [],
   reversible: true,
-  breakingNotes: "Granular profiles and manifest introduction. No breaking changes; multi-tenant deprecated.",
+  breakingNotes:
+    "Granular profiles and manifest introduction. No breaking changes; multi-tenant deprecated.",
   plan(_context: UpdateContext): PlannedOperation[] {
     return [];
   },

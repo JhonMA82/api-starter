@@ -42,7 +42,11 @@ export function mergePackageJson(
     for (const key of managedKeys) {
       if (key in next) {
         // For dependencies, merge only @consulting/* and drizzle-* keys, preserve others
-        if ((key === "dependencies" || key === "devDependencies") && typeof current[key] === "object" && typeof next[key] === "object") {
+        if (
+          (key === "dependencies" || key === "devDependencies") &&
+          typeof current[key] === "object" &&
+          typeof next[key] === "object"
+        ) {
           const currentDeps = current[key] as Record<string, string>;
           const nextDeps = next[key] as Record<string, string>;
           const merged: Record<string, string> = { ...currentDeps };
@@ -53,7 +57,10 @@ export function mergePackageJson(
           }
           // Remove deps that are no longer in next but were managed
           for (const dep of Object.keys(currentDeps)) {
-            if ((dep.startsWith("@consulting/") || dep === "drizzle-orm" || dep === "drizzle-kit") && !(dep in nextDeps)) {
+            if (
+              (dep.startsWith("@consulting/") || dep === "drizzle-orm" || dep === "drizzle-kit") &&
+              !(dep in nextDeps)
+            ) {
               delete merged[dep];
             }
           }

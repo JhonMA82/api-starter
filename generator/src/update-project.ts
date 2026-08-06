@@ -1,22 +1,30 @@
-import { copyFileSync, existsSync, mkdirSync, readFileSync, rmSync, statSync, writeFileSync } from "node:fs";
 import { execSync } from "node:child_process";
+import { copyFileSync, existsSync, mkdirSync, readFileSync, rmSync, statSync } from "node:fs";
 import path from "node:path";
 
 import { hashFileContent } from "./hashing";
 import { readManifest, writeManifest } from "./manifest";
+import { cleanupTempDir, materializeToTemp } from "./materialize";
 import { planFeatureSet } from "./plan";
 import { buildUpdatePlan } from "./update-plan";
-import { materializeToTemp, cleanupTempDir } from "./materialize";
 
 const USAGE = `usage: bun generator/src/update-project.ts --project <dir> --to <version> [--apply] [--json]`;
 
-function parseArgs(args: readonly string[]): { project: string; to: string; apply: boolean; asJson: boolean } {
+function parseArgs(args: readonly string[]): {
+  project: string;
+  to: string;
+  apply: boolean;
+  asJson: boolean;
+} {
   let project = ".";
   let to: string | undefined;
   let apply = false;
   let asJson = false;
   for (let i = 0; i < args.length; i += 1) {
     const arg = args[i];
+    if (arg === undefined) {
+      continue;
+    }
     if (arg === "--project" || arg.startsWith("--project=")) {
       project = arg === "--project" ? (args[++i] as string) : arg.slice("--project=".length);
     } else if (arg === "--to" || arg.startsWith("--to=")) {
@@ -74,7 +82,9 @@ function main(): void {
     const updatePlan = buildUpdatePlan(project, manifest, canonicalDir);
 
     const conflicts = updatePlan.files.filter((f) => f.classification === "conflict");
-    const safeOps = updatePlan.files.filter((f) => ["add", "update-safe", "remove-safe"].includes(f.classification));
+    const safeOps = updatePlan.files.filter((f) =>
+      ["add", "update-safe", "remove-safe"].includes(f.classification),
+    );
 
     if (asJson) {
       const output = {
@@ -140,7 +150,12 @@ function main(): void {
     }
 
     // Backup
-    const backupDir = path.join(project, ".api-starter", "backups", new Date().toISOString().replace(/[:.]/g, "-"));
+    const backupDir = path.join(
+      project,
+      ".api-starter",
+      "backups",
+      new Date().toISOString().replace(/[:.]/g, "-"),
+    );
     mkdirSync(backupDir, { recursive: true });
     const backedUp: { path: string; backupPath: string | null; wasNew: boolean }[] = [];
 
@@ -191,7 +206,9 @@ function main(): void {
       }
 
       // Update manifest at the end, never at the beginning
-      const newManagedFiles: Record<string, { baselineHash: string; strategy: string }> = { ...manifest.managedFiles };
+      const newManagedFiles: Record<string, { baselineHash: string; strategy: string }> = {
+        ...manifest.managedFiles,
+      };
       for (const op of safeOps) {
         if (op.classification === "remove-safe") {
           delete newManagedFiles[op.path];
@@ -214,13 +231,17 @@ function main(): void {
         ...manifest,
         starter: { ...manifest.starter, version: to },
         generation: { ...manifest.generation, updatedAt: new Date().toISOString() },
-        managedFiles: Object.fromEntries(Object.entries(newManagedFiles).sort(([a], [b]) => a.localeCompare(b))),
+        managedFiles: Object.fromEntries(
+          Object.entries(newManagedFiles).sort(([a], [b]) => a.localeCompare(b)),
+        ),
         appliedUpdates: [...manifest.appliedUpdates, `${manifest.starter.version}->${to}`],
       };
       writeManifest(project, updatedManifest as never);
 
       if (!asJson) {
-        console.log(`\nupdate applied: ${safeOps.length} file(s) updated, manifest bumped to ${to}`);
+        console.log(
+          `\nupdate applied: ${safeOps.length} file(s) updated, manifest bumped to ${to}`,
+        );
         console.log(`backup at: ${backupDir}`);
       }
       process.exit(0);

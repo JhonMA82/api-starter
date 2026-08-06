@@ -1,8 +1,7 @@
-import { existsSync, readFileSync, readdirSync, statSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import path from "node:path";
-
-import { hashFileContent } from "./hashing";
 import { getFileStrategy } from "./file-strategies";
+import { hashFileContent } from "./hashing";
 import type { Manifest } from "./manifest";
 
 export type Classification =
@@ -148,7 +147,11 @@ export function buildUpdatePlan(
       } else if (projectHash !== baselineHash && canonicalHash === baselineHash) {
         classification = "customized-no-upstream-change";
         reason = "locally customized but upstream unchanged; keep customization";
-      } else if (projectHash !== baselineHash && canonicalHash !== baselineHash && projectHash !== canonicalHash) {
+      } else if (
+        projectHash !== baselineHash &&
+        canonicalHash !== baselineHash &&
+        projectHash !== canonicalHash
+      ) {
         classification = "conflict";
         reason = "locally customized and upstream also changed; not overwritten";
       } else {
@@ -175,9 +178,17 @@ export function buildUpdatePlan(
   return { fromVersion, toVersion, files: operations.sort((a, b) => a.path.localeCompare(b.path)) };
 }
 
-export function summarizePlan(plan: UpdatePlan): { safe: FileOperation[]; conflicts: FileOperation[]; unchanged: FileOperation[] } {
-  const safe = plan.files.filter((f) => ["add", "update-safe", "remove-safe"].includes(f.classification));
+export function summarizePlan(plan: UpdatePlan): {
+  safe: FileOperation[];
+  conflicts: FileOperation[];
+  unchanged: FileOperation[];
+} {
+  const safe = plan.files.filter((f) =>
+    ["add", "update-safe", "remove-safe"].includes(f.classification),
+  );
   const conflicts = plan.files.filter((f) => f.classification === "conflict");
-  const unchanged = plan.files.filter((f) => ["unchanged", "customized-no-upstream-change"].includes(f.classification));
+  const unchanged = plan.files.filter((f) =>
+    ["unchanged", "customized-no-upstream-change"].includes(f.classification),
+  );
   return { safe, conflicts, unchanged };
 }

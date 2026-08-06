@@ -31,7 +31,8 @@ export const UPDATES: readonly Update[] = [
     to: "0.11.0",
     appliesTo: [],
     reversible: true,
-    breakingNotes: "Example update for granular profiles and manifest. No breaking changes for existing projects; multi-tenant remains deprecated.",
+    breakingNotes:
+      "Example update for granular profiles and manifest. No breaking changes for existing projects; multi-tenant remains deprecated.",
     plan: () => [],
   },
 ];
@@ -78,14 +79,18 @@ export function resolveUpdatePath(fromVersion: string, toVersion: string): Updat
       throw new Error(`no update path from ${current} to ${toVersion}: missing ${current} -> ...`);
     }
     if (compareSemVer(next.to, toVersion) > 0) {
-      throw new Error(`no update path from ${fromVersion} to ${toVersion}: next update ${next.id} goes beyond target`);
+      throw new Error(
+        `no update path from ${fromVersion} to ${toVersion}: next update ${next.id} goes beyond target`,
+      );
     }
     path.push(next);
     current = next.to;
   }
 
   if (current !== toVersion) {
-    throw new Error(`no update path from ${fromVersion} to ${toVersion}: incomplete path, stopped at ${current}`);
+    throw new Error(
+      `no update path from ${fromVersion} to ${toVersion}: incomplete path, stopped at ${current}`,
+    );
   }
 
   return path;
