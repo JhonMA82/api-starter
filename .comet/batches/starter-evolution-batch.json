@@ -29,7 +29,7 @@
     },
     {
       "name": "versioned-manifest-adopt",
-      "status": "open-complete",
+      "status": "selected",
       "goals": "Sustituir GENERATED.md como fuente machine-readable por .api-starter/manifest.json versionado con hashes SHA-256, estrategias managed/structured/scaffold/ignored y adopción legacy",
       "scope": "generator/src/manifest.ts, generator/src/hashing.ts, generator/src/materialize.ts, generator/src/adopt-project.ts, GENERATED.md como vista derivada, add:feature actualizado",
       "nonGoals": "doctor/diff/update engine completo, migraciones versionadas del starter, políticas de conflicto avanzadas más allá de baselineHash",
@@ -76,5 +76,5 @@
       ]
     }
   ],
-  "updatedAt": "2026-08-06T03:40:57.666146Z"
+  "updatedAt": "2026-08-06T03:45:00.020592Z"
 }
