@@ -1,14 +1,19 @@
 import { existsSync } from "node:fs";
 import path from "node:path";
-
+import { resolveUpdatePath } from "../updates/registry";
 import { readManifest } from "./manifest";
 import { cleanupTempDir, materializeToTemp } from "./materialize";
 import { planFeatureSet } from "./plan";
+import { resolveTargetVersion } from "./starter-version";
 import { buildUpdatePlan } from "./update-plan";
 
-const USAGE = `usage: bun generator/src/diff-project.ts --project <dir> --to <version> [--json]`;
+const USAGE = `usage: bun generator/src/diff-project.ts --project <dir> [--to <version>] [--json]`;
 
-function parseArgs(args: readonly string[]): { project: string; to: string; asJson: boolean } {
+function parseArgs(args: readonly string[]): {
+  project: string;
+  to: string | undefined;
+  asJson: boolean;
+} {
   let project = ".";
   let to: string | undefined;
   let asJson = false;
@@ -31,15 +36,27 @@ function parseArgs(args: readonly string[]): { project: string; to: string; asJs
       process.exit(2);
     }
   }
-  if (!to) {
-    console.error(`--to is required\n${USAGE}`);
-    process.exit(2);
-  }
   return { project: path.resolve(project), to, asJson };
 }
 
 function main(): void {
-  const { project, to, asJson } = parseArgs(process.argv.slice(2));
+  const { project, to: userTo, asJson } = parseArgs(process.argv.slice(2));
+
+  // Resolve canonical version before any I/O that mutates; fail fast on mismatch
+  let canonical: string;
+  try {
+    canonical = resolveTargetVersion(userTo);
+  } catch (error) {
+    const msg = error instanceof Error ? error.message : String(error);
+    const toForOutput = userTo ?? "(none)";
+    if (asJson) {
+      console.log(JSON.stringify({ project, to: toForOutput, valid: false, error: msg }, null, 2));
+    } else {
+      console.error(`error: ${msg}`);
+    }
+    process.exit(1);
+  }
+  const to = canonical;
 
   if (!existsSync(path.join(project, ".api-starter", "manifest.json"))) {
     const msg = `manifest not found at ${path.join(project, ".api-starter", "manifest.json")}`;
@@ -64,38 +81,79 @@ function main(): void {
     process.exit(1);
   }
 
+  // Validate registry path before materializing (still require manifest)
+  let updatePath: ReturnType<typeof resolveUpdatePath> = [];
+  let pathError: string | null = null;
+  try {
+    updatePath = resolveUpdatePath(manifest.starter.version, canonical);
+  } catch (error) {
+    pathError = error instanceof Error ? error.message : String(error);
+  }
+
   // Materialize canonical target using exactly the same features
   let canonicalDir: string | null = null;
   try {
-    // For diff, we materialize with current generator's logic; --to is validated as SemVer but we don't fetch remote
     const plan = planFeatureSet(manifest.generation.features, manifest.generation.profile);
     canonicalDir = materializeToTemp(plan);
 
     const updatePlan = buildUpdatePlan(project, manifest, canonicalDir);
 
-    const hasConflict = updatePlan.files.some((f) => f.classification === "conflict");
-    const hasInvalid = false; // already validated
+    const hasConflict =
+      updatePlan.files.some(
+        (f) => f.classification === "conflict" || f.classification === "manual-migration",
+      ) || pathError !== null;
+    const hasInvalid = pathError !== null;
+    const requiresManual = updatePath.some((u) => (u.requiresManual?.length ?? 0) > 0);
 
     if (asJson) {
-      const output = {
+      const output: Record<string, unknown> = {
         project,
         to,
         fromVersion: manifest.starter.version,
-        toVersion: to,
-        valid: !hasConflict && !hasInvalid,
+        toVersion: canonical,
+        valid: !hasConflict && !hasInvalid && !requiresManual,
         files: updatePlan.files.map((f) => ({
           path: f.path,
           classification: f.classification,
           reason: f.reason,
           strategy: f.strategy,
         })),
+        updatePath: updatePath.map((u) => ({
+          id: u.id,
+          from: u.from,
+          to: u.to,
+          breakingNotes: u.breakingNotes,
+          requiresManual: u.requiresManual,
+          postValidations: u.postValidations,
+        })),
       };
+      if (pathError) {
+        (output as Record<string, unknown>).error = pathError;
+      }
+      if (requiresManual) {
+        (output as Record<string, unknown>).requiresManual = updatePath.flatMap(
+          (u) => u.requiresManual ?? [],
+        );
+      }
       console.log(JSON.stringify(output, null, 2));
     } else {
-      console.log(`diff: ${project} (${manifest.starter.version} → ${to})`);
+      console.log(`diff: ${project} (${manifest.starter.version} → ${canonical})`);
       console.log(
         `profile: ${manifest.generation.profile}, features: ${manifest.generation.features.join(", ") || "(none)"}`,
       );
+      if (pathError) {
+        console.log(`update path error: ${pathError}`);
+      }
+      if (updatePath.length > 0) {
+        console.log(`update path: ${updatePath.map((u) => u.id).join(" -> ")}`);
+        for (const u of updatePath) {
+          if (u.breakingNotes) console.log(`  breaking: ${u.id}: ${u.breakingNotes}`);
+          if (u.requiresManual?.length)
+            console.log(`  manual: ${u.id}: ${u.requiresManual.join(", ")}`);
+          if (u.postValidations?.length)
+            console.log(`  validations: ${u.id}: ${u.postValidations.join(", ")}`);
+        }
+      }
       console.log("");
       const groups: Record<string, typeof updatePlan.files> = {};
       for (const file of updatePlan.files) {
@@ -134,7 +192,7 @@ function main(): void {
     // Since diff is read-only, we just ensure we didn't write to project
     // (materializeToTemp writes to temp, not project, so safe)
 
-    process.exit(hasConflict || hasInvalid ? 1 : 0);
+    process.exit(hasConflict || hasInvalid || requiresManual ? 1 : 0);
   } finally {
     if (canonicalDir) {
       cleanupTempDir(canonicalDir);

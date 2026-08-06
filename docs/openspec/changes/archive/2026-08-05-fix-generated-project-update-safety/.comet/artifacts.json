@@ -1,0 +1,9 @@
+{
+  "openspec_proposal": "docs/openspec/changes/fix-generated-project-update-safety/proposal.md",
+  "openspec_design": "docs/openspec/changes/fix-generated-project-update-safety/design.md",
+  "openspec_tasks": "docs/openspec/changes/fix-generated-project-update-safety/tasks.md",
+  "openspec_delta_spec": "docs/openspec/changes/fix-generated-project-update-safety/specs/architecture-guardrails/spec.md",
+  "handoff_context": "docs/openspec/changes/archive/2026-08-05-fix-generated-project-update-safety/.comet/handoff/design-context.json",
+  "handoff_markdown": "docs/openspec/changes/archive/2026-08-05-fix-generated-project-update-safety/.comet/handoff/design-context.md",
+  "archive_directory": "docs/openspec/changes/archive/2026-08-05-fix-generated-project-update-safety"
+}

@@ -166,9 +166,32 @@ export function buildUpdatePlan(
       reason = "no change";
     }
 
-    // Manual migration for tenancy-related files that are newly added and require data review
-    // For now, we don't have a specific list, so we keep classification as is.
-    // Future: if rel starts with "migrations/" and contains organization_id, mark as manual-migration
+    // Structured files without safe merger → conflict (fail closed)
+    const SUPPORTED_STRUCTURED = new Set(["package.json", "apps/api/package.json", ".env.example"]);
+    if (strategy === "structured" && !SUPPORTED_STRUCTURED.has(rel)) {
+      if (classification === "update-safe" || classification === "add") {
+        classification = "conflict";
+        reason = `structured file ${rel} has no safe merger; requires manual review`;
+      }
+    }
+
+    // DB migrations: non-trivial changes → manual-migration
+    const isMigration =
+      rel.startsWith("migrations/") ||
+      rel === "migrations/meta/_journal.json" ||
+      rel.startsWith("drizzle/");
+    if (isMigration) {
+      const isChange =
+        classification === "add" ||
+        classification === "update-safe" ||
+        classification === "conflict";
+      if (isChange) {
+        // If baseline exists but differs, or new migration added, treat as manual
+        // For now, any migration add/update is manual to avoid silent journal patch issues
+        classification = "manual-migration";
+        reason = `database migration change requires manual review; run bun run db:migrate explicitly`;
+      }
+    }
 
     operations.push({ path: rel, classification, reason, strategy });
   }
