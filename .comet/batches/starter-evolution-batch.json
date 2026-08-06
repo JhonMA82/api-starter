@@ -47,7 +47,7 @@
     },
     {
       "name": "doctor-diff-update-engine",
-      "status": "selected",
+      "status": "archived",
       "goals": "Implementar motor de materialización/comparación y comandos doctor/diff/update con clasificación segura de archivos, backup/rollback y validaciones posteriores",
       "scope": "generator/src/project-doctor.ts, generator/src/diff-project.ts, generator/src/update-project.ts, generator/src/file-strategies.ts, generator/src/update-plan.ts, hashing, JSON/env/YAML strategies",
       "nonGoals": "Registro de migraciones versionadas secuenciales (siguiente cambio), ADR/template gobernanza, ejemplos de separación generated/extensions",
@@ -59,11 +59,13 @@
       ],
       "dependencies": [
         "versioned-manifest-adopt"
-      ]
+      ],
+      "archivedAt": "2026-08-06T04:10:20.545038Z",
+      "branch": "feature/20260806/granular-profiles-composition"
     },
     {
       "name": "migrations-governance",
-      "status": "open-complete",
+      "status": "archived",
       "goals": "Registro de updates secuenciales SemVer y gobernanza para evitar que el starter se convierta en framework (ADR, template, checks arquitectónicos)",
       "scope": "generator/updates/registry.ts, generator/updates/*.ts, docs/decisions/ADR-XXXX-starter-evolution-and-update-policy.md, docs/feature-proposal-template.md, docs/updating-generated-projects.md, boundary checks ampliados, docs/architecture.md",
       "nonGoals": "Nuevas features de producto, cambios de runtime en apps/api salvo separación generated/extensions mínima",
@@ -75,8 +77,10 @@
       ],
       "dependencies": [
         "doctor-diff-update-engine"
-      ]
+      ],
+      "archivedAt": "2026-08-06T04:10:20.545250Z",
+      "branch": "feature/20260806/granular-profiles-composition"
     }
   ],
-  "updatedAt": "2026-08-06T04:00:39.580753Z"
+  "updatedAt": "2026-08-06T04:10:20.545528Z"
 }
