@@ -26,8 +26,8 @@ base-ref: 1ce8cf117a18e698190c30f7c8d70ff44895c863
 - Create: generator/src/file-strategies.ts
 - Create: generator/src/update-plan.ts
 
-- [ ] Step 1: Implement file-strategies
-- [ ] Step 2: Implement update-plan classification
+- [x] Step 1: Implement file-strategies
+- [x] Step 2: Implement update-plan classification
 
 ### Task 2: Doctor and Diff
 
@@ -35,16 +35,16 @@ base-ref: 1ce8cf117a18e698190c30f7c8d70ff44895c863
 - Create: generator/src/project-doctor.ts
 - Create: generator/src/diff-project.ts
 
-- [ ] Step 1: Implement doctor
-- [ ] Step 2: Implement diff
+- [x] Step 1: Implement doctor
+- [x] Step 2: Implement diff
 
 ### Task 3: Update with safety
 
 **Files:**
 - Create: generator/src/update-project.ts
 
-- [ ] Step 1: Implement update dry-run vs --apply, backup, deterministic apply
-- [ ] Step 2: Add post-validation and rollback
+- [x] Step 1: Implement update dry-run vs --apply, backup, deterministic apply
+- [x] Step 2: Add post-validation and rollback
 
 ### Task 4: Tests and docs
 
@@ -52,5 +52,5 @@ base-ref: 1ce8cf117a18e698190c30f7c8d70ff44895c863
 - Modify: generator/tests/doctor.test.ts
 - Modify: docs/updating-generated-projects.md
 
-- [ ] Step 1: Add tests for doctor/diff/update
-- [ ] Step 2: Update docs
+- [x] Step 1: Add tests for doctor/diff/update
+- [x] Step 2: Update docs
