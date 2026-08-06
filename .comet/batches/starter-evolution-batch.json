@@ -47,7 +47,7 @@
     },
     {
       "name": "doctor-diff-update-engine",
-      "status": "open-complete",
+      "status": "selected",
       "goals": "Implementar motor de materialización/comparación y comandos doctor/diff/update con clasificación segura de archivos, backup/rollback y validaciones posteriores",
       "scope": "generator/src/project-doctor.ts, generator/src/diff-project.ts, generator/src/update-project.ts, generator/src/file-strategies.ts, generator/src/update-plan.ts, hashing, JSON/env/YAML strategies",
       "nonGoals": "Registro de migraciones versionadas secuenciales (siguiente cambio), ADR/template gobernanza, ejemplos de separación generated/extensions",
@@ -78,5 +78,5 @@
       ]
     }
   ],
-  "updatedAt": "2026-08-06T03:59:40.671653Z"
+  "updatedAt": "2026-08-06T04:00:39.580753Z"
 }
