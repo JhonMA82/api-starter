@@ -2,6 +2,8 @@
 comet_change: versioned-manifest-adopt
 role: technical-design
 canonical_spec: openspec
+archived-with: 2026-08-05-versioned-manifest-adopt
+status: final
 ---
 
 # Technical Design: Versioned Manifest and Adopt

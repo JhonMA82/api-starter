@@ -2,6 +2,7 @@
 change: versioned-manifest-adopt
 design-doc: docs/superpowers/specs/2026-08-06-manifest-adopt-design.md
 base-ref: 8e63cee0b116b0c9a7c48b41ead2a09960420197
+archived-with: 2026-08-05-versioned-manifest-adopt
 ---
 
 # Versioned Manifest and Adopt Implementation Plan
