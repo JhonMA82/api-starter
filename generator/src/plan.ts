@@ -270,7 +270,14 @@ function buildProjectPlan(profileId: string, features: readonly string[]): Proje
 }
 
 export function parseCsv(csv: string): string[] {
-  return [...new Set(csv.split(",").map((s) => s.trim()).filter(Boolean))];
+  return [
+    ...new Set(
+      csv
+        .split(",")
+        .map((s) => s.trim())
+        .filter(Boolean),
+    ),
+  ];
 }
 
 export function closeTransitive(ids: string[]): string[] {
@@ -318,7 +325,9 @@ export function planFeatureSet(features: readonly string[], profileId = "custom"
     throw new UnknownFeatureError(unknown.feature);
   }
   if (issues.length > 0) {
-    throw new GenerationError(`feature set is invalid: ${issues.map((issue) => issue.message).join("; ")}`);
+    throw new GenerationError(
+      `feature set is invalid: ${issues.map((issue) => issue.message).join("; ")}`,
+    );
   }
   return buildProjectPlan(profileId, closed);
 }

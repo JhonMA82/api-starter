@@ -6,10 +6,25 @@
   "generated_by": "comet-handoff.sh",
   "context_hash": "fe2fc9fdaff79b481e904d353b17c17720fea9e1a5027320ccbff961aef7a4f8",
   "files": [
-    { "path": "docs/openspec/changes/granular-profiles-composition/proposal.md", "sha256": "4bbabccc79dc534194309927e3644aca716d24a4813cdd3aba7669b5cdf0b1a6" },
-    { "path": "docs/openspec/changes/granular-profiles-composition/design.md", "sha256": "c6338c2aa41b3eefbffaf0fd470b03862fa8cad7374a7d48ec085b187b18406e" },
-    { "path": "docs/openspec/changes/granular-profiles-composition/tasks.md", "sha256": "4eca508e5768763f4d5a588061ae3f99d7522225a05f19df04cbbf2d45c6fefd" },
-    { "path": "docs/openspec/changes/granular-profiles-composition/specs/generator-composition/spec.md", "sha256": "995423401e3d46f0dde1a71b14393facec3c31310398e9bac791f76e58dea206" },
-    { "path": "docs/openspec/changes/granular-profiles-composition/specs/generator-profiles/spec.md", "sha256": "6f456caedc9cd00fe40122e5166734988ad1599b5e412175496c6b977743a94e" }
+    {
+      "path": "docs/openspec/changes/granular-profiles-composition/proposal.md",
+      "sha256": "4bbabccc79dc534194309927e3644aca716d24a4813cdd3aba7669b5cdf0b1a6"
+    },
+    {
+      "path": "docs/openspec/changes/granular-profiles-composition/design.md",
+      "sha256": "c6338c2aa41b3eefbffaf0fd470b03862fa8cad7374a7d48ec085b187b18406e"
+    },
+    {
+      "path": "docs/openspec/changes/granular-profiles-composition/tasks.md",
+      "sha256": "4eca508e5768763f4d5a588061ae3f99d7522225a05f19df04cbbf2d45c6fefd"
+    },
+    {
+      "path": "docs/openspec/changes/granular-profiles-composition/specs/generator-composition/spec.md",
+      "sha256": "995423401e3d46f0dde1a71b14393facec3c31310398e9bac791f76e58dea206"
+    },
+    {
+      "path": "docs/openspec/changes/granular-profiles-composition/specs/generator-profiles/spec.md",
+      "sha256": "6f456caedc9cd00fe40122e5166734988ad1599b5e412175496c6b977743a94e"
+    }
   ]
 }

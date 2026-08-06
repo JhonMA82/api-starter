@@ -44,17 +44,13 @@ function printIssues(issues: { kind: string; feature: string; message: string }[
   }
 }
 
-function getArgValue(
-  args: string[],
-  long: string,
-  short?: string,
-): string | undefined {
+function getArgValue(args: string[], long: string, short?: string): string | undefined {
   for (let i = 0; i < args.length; i += 1) {
     const arg = args[i];
     if (arg === long || (short && arg === short)) {
       return args[i + 1];
     }
-    if (arg !== undefined && arg.startsWith(`${long}=`)) {
+    if (arg?.startsWith(`${long}=`)) {
       return arg.slice(long.length + 1);
     }
   }
@@ -142,7 +138,9 @@ if (profileRaw !== undefined) {
     process.exit(1);
   }
   if (asJson) {
-    console.log(JSON.stringify({ valid: true, profile: profileRaw, features: result.features }, null, 2));
+    console.log(
+      JSON.stringify({ valid: true, profile: profileRaw, features: result.features }, null, 2),
+    );
   } else {
     console.log(`ok: profile "${profileRaw}" resolves to ${result.features.length} feature(s)`);
   }
@@ -160,7 +158,9 @@ if (catalogIssues.length > 0) {
   process.exit(1);
 }
 if (asJson) {
-  console.log(JSON.stringify({ valid: true, profiles: PROFILES.length, features: FEATURES.length }, null, 2));
+  console.log(
+    JSON.stringify({ valid: true, profiles: PROFILES.length, features: FEATURES.length }, null, 2),
+  );
 } else {
   console.log(`ok: catalog valid (${PROFILES.length} profiles, ${FEATURES.length} features)`);
 }

@@ -15,7 +15,7 @@ import { GenerationError, UnknownFeatureError, UnknownProfileError } from "./err
 import { FEATURES } from "./features";
 import { filterMigrationJournal } from "./migrations";
 import { type ProjectPlan, planFromSelection, planProject } from "./plan";
-import { PROFILES, getProfile } from "./profiles";
+import { getProfile, PROFILES } from "./profiles";
 import {
   computeRemoveList,
   rewriteAppPackageJson,
@@ -59,7 +59,9 @@ function printFeatures(asJson: boolean): void {
   for (const feature of FEATURES) {
     const req = feature.requires.length > 0 ? feature.requires.join(",") : "-";
     const exc = feature.excludedBy.length > 0 ? feature.excludedBy.join(",") : "-";
-    console.log(`${feature.id.padEnd(20)} ${feature.description} requires:[${req}] excludedBy:[${exc}]`);
+    console.log(
+      `${feature.id.padEnd(20)} ${feature.description} requires:[${req}] excludedBy:[${exc}]`,
+    );
   }
 }
 

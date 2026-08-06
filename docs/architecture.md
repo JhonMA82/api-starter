@@ -97,17 +97,23 @@ Los archivos son **referencias, nunca blobs**: la tabla `files` (migración 0010
 
 ## Generador
 
-`generator/` es tooling fuera de los workspaces de runtime. Su catálogo de 12 features y sus perfiles (`minimal`, `data-api`, `authenticated`, `multi-tenant`, `platform`) permiten crear proyectos con **poda física**, no con feature flags: los proyectos generados excluyen físicamente las features no seleccionadas. El perfil `platform` añade observabilidad a `multi-tenant`; `dynamicRoles` permanece diferido por su conflicto con `authorization`. Ver ADR-0010.
+`generator/` es tooling fuera de los workspaces de runtime. Su catálogo de 12 features y sus perfiles (`minimal`, `data-api`, `authenticated`, `multi-tenant-core`, `integration-platform`, `platform` — más `multi-tenant` preservado como alias deprecated —) permiten crear proyectos con **poda física**, no con feature flags: los proyectos generados excluyen físicamente las features no seleccionadas. `multi-tenant-core` aporta tenancy+audit sin integraciones; `integration-platform` añade apiKeys/jobs/webhooks; `platform` añade files/notifications/observability a la plataforma de integración; `dynamicRoles` permanece diferido por su conflicto con `authorization`. Ver ADR-0010.
 
 ```bash
-bun run generator:validate -- --profile=minimal
+bun run generator:validate                          # valida todo el catálogo
+bun run generator:validate -- --profile=minimal     # valida un perfil
+bun run generator:validate -- --list-profiles       # enumera perfiles
 bun run create:project -- --profile=authenticated --out=../my-api
+bun run create:project -- --features=persistence,auth,authorization,tenancy,audit --out=../my-api  # composición exacta
+bun run create:project -- --profile=multi-tenant-core --with=files,notifications --out=../my-api    # extensión de perfil
+bun run create:project -- --list-profiles --json    # descubrible en CI/agentes
 bun run add:feature -- --feature=multitenancy --project=../my-api --with-requires
 bun run create:module -- --name=requests --scope=tenant --crud --events --audit --out=../my-api/modules
 ```
 
-- `create:project` elimina físicamente módulos, paquetes, migraciones, snapshots y tests de aplicación no seleccionados, reescribe el journal y deja `GENERATED.md`.
+- `create:project` elimina físicamente módulos, paquetes, migraciones, snapshots y tests de aplicación no seleccionados, reescribe el journal y deja `GENERATED.md`. Soporta `--features=<csv>` para una composición exacta y `--profile <id> --with=<csv>` para extender un perfil curado; ambas resuelven dependencias transitivas, rechazan conflictos vía `excludedBy`, muestran el plan final y validan orden determinista. `--list-profiles`/`--list-features` (con `--json`) hacen el catálogo descubrible en CI. Al seleccionar `multi-tenant` (deprecated) emite advertencia a stderr recomendando `multi-tenant-core`, `integration-platform` o `platform` pero sigue generando correctamente.
 - `add:feature` calcula requisitos transitivos, acepta `multitenancy` como alias de `tenancy`, protege archivos custom mediante marcadores y escribe `FEATURE_PLAN.md`. Al añadir tenancy muestra una advertencia y un plan de migración para revisión; nunca cambia datos ni ejecuta ese plan. Los destinos no vacíos y los archivos protegidos fallan de forma segura; `--force` hace explícita la recreación o sobrescritura.
+- **Validación:** `generator:validate` verifica IDs únicos, features conocidas, dependencias transitivas, conflictos, ciclos, orden determinista, reemplazos de perfiles deprecated, y que `platform` coincida con la unión completa de features salvo las diferidas (`dynamicRoles`).
 - **Instalación:** los proyectos generados requieren `bun install`; el generador no edita `bun.lock`. El wiring de proveedores (S3/R2/MinIO, SMTP) queda a cargo de cada proyecto generado.
 
 ## SDK y kits frontend
