@@ -1,0 +1,78 @@
+{
+  "version": 1,
+  "batchId": "starter-evolution-batch",
+  "originalGoal": "Evolucionar api-starter sin convertirlo en framework: perfiles granulares, composición personalizada, manifiesto versionado, estrategia segura de actualización (doctor/diff/update/adopt) y gobernanza",
+  "sourceDocument": "OPENCODE_API_STARTER_VNEXT_MAINTENIBILIDAD.md",
+  "createdAt": "2026-08-05T00:00:00.000Z",
+  "orderedChanges": [
+    "granular-profiles-composition",
+    "versioned-manifest-adopt",
+    "doctor-diff-update-engine",
+    "migrations-governance"
+  ],
+  "items": [
+    {
+      "name": "granular-profiles-composition",
+      "status": "selected",
+      "goals": "Introducir perfiles granulares data-api, authenticated, multi-tenant-core, integration-platform, platform; deprecara multi-tenant y soportar composición personalizada por features",
+      "scope": "generator/profiles.json, generator/features.json, generator/src/plan.ts, generator/src/profiles.ts, generator/src/validate.ts, generator/src/create-project.ts, CLI --features/--with/--list-profiles/--list-features, catalog validations",
+      "nonGoals": "Manifiesto, doctor/diff/update, migraciones versionadas, ADR/gobernanza",
+      "acceptanceScenarios": [
+        "profile minimal/data-api/authenticated/multi-tenant-core/integration-platform/platform generan proyectos que instalan/tipan/testean",
+        "multi-tenant existente sigue funcionando pero emite warning deprecated y sugiere reemplazos",
+        "bun run create:project -- --features=persistence,auth produce proyecto equivalente a profile authenticated",
+        "bun run generator:validate verifica IDs únicos, deps transitivas, ciclos, orden determinista y que platform == all features salvo diferidas"
+      ],
+      "dependencies": []
+    },
+    {
+      "name": "versioned-manifest-adopt",
+      "status": "open-complete",
+      "goals": "Sustituir GENERATED.md como fuente machine-readable por .api-starter/manifest.json versionado con hashes SHA-256, estrategias managed/structured/scaffold/ignored y adopción legacy",
+      "scope": "generator/src/manifest.ts, generator/src/hashing.ts, generator/src/materialize.ts, generator/src/adopt-project.ts, GENERATED.md como vista derivada, add:feature actualizado",
+      "nonGoals": "doctor/diff/update engine completo, migraciones versionadas del starter, políticas de conflicto avanzadas más allá de baselineHash",
+      "acceptanceScenarios": [
+        "proyecto nuevo genera .api-starter/manifest.json válido con schemaVersion, starter.version, profile, features, hashes baseline",
+        "add:feature actualiza manifiesto atómicamente",
+        "bun run generator:adopt -- --project=../legacy --baseline=0.1.0 migra desde GENERATED.md con reporte previo",
+        "manifiesto corrupto o schema futuro es rechazado sin reparación silenciosa"
+      ],
+      "dependencies": [
+        "granular-profiles-composition"
+      ]
+    },
+    {
+      "name": "doctor-diff-update-engine",
+      "status": "open-complete",
+      "goals": "Implementar motor de materialización/comparación y comandos doctor/diff/update con clasificación segura de archivos, backup/rollback y validaciones posteriores",
+      "scope": "generator/src/project-doctor.ts, generator/src/diff-project.ts, generator/src/update-project.ts, generator/src/file-strategies.ts, generator/src/update-plan.ts, hashing, JSON/env/YAML strategies",
+      "nonGoals": "Registro de migraciones versionadas secuenciales (siguiente cambio), ADR/template gobernanza, ejemplos de separación generated/extensions",
+      "acceptanceScenarios": [
+        "doctor detecta manifiesto ausente/inválido, hashes desactualizados, archivo gestionado faltante/modificado, composición inconsistente y git sucio como warning",
+        "diff es read-only, materializa versión objetivo y clasifica add/update-safe/remove-safe/unchanged/customized/conflict/manual-migration con exit code !=0 si hay conflictos",
+        "update sin --apply es dry-run; con --apply respeta personalizaciones, crea backup, es determinista, valida typecheck/tests y revierte + no toca manifiesto si falla",
+        "segunda ejecución de update es idempotente sin cambios"
+      ],
+      "dependencies": [
+        "versioned-manifest-adopt"
+      ]
+    },
+    {
+      "name": "migrations-governance",
+      "status": "open-complete",
+      "goals": "Registro de updates secuenciales SemVer y gobernanza para evitar que el starter se convierta en framework (ADR, template, checks arquitectónicos)",
+      "scope": "generator/updates/registry.ts, generator/updates/*.ts, docs/decisions/ADR-XXXX-starter-evolution-and-update-policy.md, docs/feature-proposal-template.md, docs/updating-generated-projects.md, boundary checks ampliados, docs/architecture.md",
+      "nonGoals": "Nuevas features de producto, cambios de runtime en apps/api salvo separación generated/extensions mínima",
+      "acceptanceScenarios": [
+        "actualización 0.1.0->0.4.0 ejecuta migraciones en orden sin saltos y rechaza ruta incompleta",
+        "ADR establece qué es/no es api-starter, políticas de profiles/features/recipes/domain y prohibición de framework runtime",
+        "checks verifican domain no importa Hono/Bun/DB, features no seleccionadas no dejan residuos, y no hay dependencia runtime hacia generador",
+        "proyecto generado puede divergir sin paquete privado del starter"
+      ],
+      "dependencies": [
+        "doctor-diff-update-engine"
+      ]
+    }
+  ],
+  "updatedAt": "2026-08-06T02:39:43.847563Z"
+}
