@@ -160,3 +160,4 @@ bun run create:module -- --name=requests --scope=tenant --crud --events --audit 
 | [0010-generator-profiles-features](decisions/0010-generator-profiles-features.md) | Generador declarativo con poda física |
 | [0011-frontend-integration-kits](decisions/0011-frontend-integration-kits.md) | SDK agnóstico y kits de integración frontend |
 | [0012-hardening-observability](decisions/0012-hardening-observability.md) | Hardening: observabilidad, load test, Docker y backup/restore |
+| [0013-starter-evolution-and-update-policy](decisions/0013-starter-evolution-and-update-policy.md) | Evolución del starter, perfiles granulares, manifiesto y política de actualización |

@@ -1,4 +1,4 @@
-export const STARTER_VERSION = "0.10.1";
+export const STARTER_VERSION = "0.11.0";
 
 export interface UpdateContext {
   manifest: import("../src/manifest").Manifest;

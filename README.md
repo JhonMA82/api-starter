@@ -191,7 +191,9 @@ api/
 ## Documentación
 
 - [`docs/architecture.md`](docs/architecture.md) — visión, capas, y catálogo de funcionalidades
-- [`docs/decisions/`](docs/decisions/) — ADR (decisiones de arquitectura, en inglés)
+- [`docs/decisions/`](docs/decisions/) — ADR (decisiones de arquitectura, en inglés) — ver `0013-starter-evolution-and-update-policy.md` para perfiles/features y política de actualización
+- [`docs/updating-generated-projects.md`](docs/updating-generated-projects.md) — guía de actualización de proyectos generados (`doctor`/`diff`/`update`/`adopt`)
+- [`docs/feature-proposal-template.md`](docs/feature-proposal-template.md) — plantilla para proponer features (puerta de admisión)
 - [`docs/migrations-runbook.md`](docs/migrations-runbook.md) — guía de migraciones
 - [`docs/backup-restore.md`](docs/backup-restore.md) — runbook de backup/restore
 - [`docs/load-test.md`](docs/load-test.md) y [`docs/load-test-results.md`](docs/load-test-results.md) — load test reproducible y resultados
