@@ -458,7 +458,9 @@ describe("create-project end-to-end", () => {
       const expectedFiles = walkFiles(repoRoot)
         .filter((rel) => !excludePath(rel))
         .filter((rel) => !isUnder(rel, computeRemoveList(plan)));
-      expect(walkFiles(out)).toEqual([...expectedFiles, "GENERATED.md"].sort());
+      expect(walkFiles(out)).toEqual(
+        [...expectedFiles, "GENERATED.md", ".api-starter/manifest.json"].sort(),
+      );
 
       expect(() => generateProject("minimal", out)).toThrow(GenerationError);
       expect(() => generateProject("minimal", out)).toThrow(/--force/);

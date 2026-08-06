@@ -13,6 +13,8 @@ import { fileURLToPath } from "node:url";
 
 import { GenerationError, UnknownFeatureError, UnknownProfileError } from "./errors";
 import { FEATURES } from "./features";
+import { hashFileContent } from "./hashing";
+import { createManifest, type FileStrategy, writeManifest } from "./manifest";
 import { filterMigrationJournal } from "./migrations";
 import { type ProjectPlan, planFromSelection, planProject } from "./plan";
 import { getProfile, PROFILES } from "./profiles";
@@ -86,13 +88,24 @@ const EXCLUDED_SEGMENTS = new Set([
   ".git",
   ".codegraph",
   ".atl",
+  ".agents",
+  ".opencode",
+  ".comet",
+  ".superpowers",
   "coverage",
   "dist",
   "generator",
   "node_modules",
 ]);
 
-const EXCLUDED_BASENAMES = new Set([".env", ".env.test", "OPENCODE_HONO_BACKEND_REUTILIZABLE.md"]);
+const EXCLUDED_BASENAMES = new Set([
+  ".env",
+  ".env.test",
+  "OPENCODE_HONO_BACKEND_REUTILIZABLE.md",
+  "OPENCODE_API_STARTER_VNEXT_MAINTENIBILIDAD.md",
+  "CLAUDE.md",
+  "skills-lock.json",
+]);
 
 export function excludePath(relativePath: string): boolean {
   const segments = relativePath.split(path.sep);
@@ -112,6 +125,80 @@ export function excludePath(relativePath: string): boolean {
 function rewrite(target: string, transform: (source: string) => string): void {
   const source = readFileSync(target, "utf8");
   writeFileSync(target, transform(source));
+}
+
+function getFileStrategy(relativePath: string): FileStrategy {
+  if (
+    relativePath === "package.json" ||
+    relativePath === "apps/api/package.json" ||
+    relativePath === "tsconfig.json" ||
+    relativePath === ".env.example" ||
+    relativePath === "drizzle.config.ts" ||
+    relativePath === "docker-compose.yml" ||
+    relativePath === "packages/config/src/env.ts"
+  ) {
+    return "structured";
+  }
+  if (relativePath.startsWith("scripts/db")) {
+    return "scaffold";
+  }
+  if (relativePath === "GENERATED.md" || relativePath.startsWith(".api-starter")) {
+    return "ignored";
+  }
+  return "managed";
+}
+
+function collectManagedFiles(
+  outPath: string,
+  _plan: ProjectPlan,
+): Record<string, { baselineHash: string; strategy: FileStrategy }> {
+  const managed: Record<string, { baselineHash: string; strategy: FileStrategy }> = {};
+
+  function walk(dir: string, base: string): void {
+    const entries = readdirSync(dir, { withFileTypes: true });
+    for (const entry of entries) {
+      const fullPath = path.join(dir, entry.name);
+      const rel = base === "" ? entry.name : `${base}/${entry.name}`;
+      if (entry.isDirectory()) {
+        if (rel === ".api-starter") {
+          continue;
+        }
+        walk(fullPath, rel);
+      } else {
+        if (rel === ".api-starter/manifest.json") {
+          continue;
+        }
+        if (rel === "bun.lock") {
+          continue;
+        }
+        if (rel === ".env" || rel.endsWith(".log")) {
+          continue;
+        }
+        const strategy = getFileStrategy(rel);
+        if (strategy === "ignored") {
+          continue;
+        }
+        try {
+          const content = readFileSync(fullPath, "utf8");
+          const baselineHash = hashFileContent(content);
+          managed[rel] = { baselineHash, strategy };
+        } catch {
+          // binary or unreadable, skip
+        }
+      }
+    }
+  }
+
+  walk(outPath, "");
+  // Sort keys deterministically
+  const sorted: Record<string, { baselineHash: string; strategy: FileStrategy }> = {};
+  for (const key of Object.keys(managed).sort()) {
+    const entry = managed[key];
+    if (entry) {
+      sorted[key] = entry;
+    }
+  }
+  return sorted;
 }
 
 export function generateProjectFromPlan(
@@ -195,6 +282,10 @@ Next steps:
 - bun run dev${databaseSteps}
 `;
   writeFileSync(path.join(outPath, "GENERATED.md"), marker);
+
+  const managedFiles = collectManagedFiles(outPath, plan);
+  const manifest = createManifest(plan.profile, plan.features, managedFiles);
+  writeManifest(outPath, manifest);
 
   return plan;
 }
