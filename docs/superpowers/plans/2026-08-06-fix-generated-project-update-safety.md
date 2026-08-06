@@ -1,6 +1,6 @@
 # fix-generated-project-update-safety Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [x]`) syntax for tracking.
 
 **Goal:** Reproducibly verify O1–O8 and fix confirmed gaps so `generator:diff` / `generator:update` / `generator:adopt` share a single canonical version truth, enforce registry sequencing, preserve structured merges, validate with rollback, and document only real behavior.
 
@@ -42,7 +42,7 @@ base-ref: 16d8820b6631a25963da9b9ae05dac453b5be9d2
 - Consumes: git/package.json state
 - Produces: verification report path, helper `createTempProject({profile,features,version}) -> {dir, manifest}` + `hashFile`, `assertNoWrites`
 
-- [ ] **Step 1: Record baseline state**
+- [x] **Step 1: Record baseline state**
 
 Collect in verification doc preamble:
 ```bash
@@ -51,7 +51,7 @@ bun run generator:validate; bun run lint; bun run typecheck; bun test 2>&1 | tai
 ```
 Commit skeleton with table header `| ID | Observation | State | Evidence | Action |`.
 
-- [ ] **Step 2: Implement tmp-project helper**
+- [x] **Step 2: Implement tmp-project helper**
 
 `generator/tests/helpers/tmp-project.ts` exports:
 ```ts
@@ -60,11 +60,11 @@ export function cleanup(dir:string): void
 export function writePersonalization(dir:string, patch:{packageJson?:object, env?:string, files?:Record<string,string>}): void
 ```
 
-- [ ] **Step 3: Verify baseline passes**
+- [x] **Step 3: Verify baseline passes**
 
 Run `bun test generator/tests/helpers --run` expecting helpers load cleanly.
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add docs/verification-generated-project-update-vnext.md generator/tests/helpers/tmp-project.ts
@@ -81,7 +81,7 @@ git commit -m "chore: verification harness and baseline for update safety"
 - Consumes: `package.json` at starter root
 - Produces: `getCanonicalStarterVersion(): string`, `getStarterRoot(): string`, `resolveTargetVersion(userTo?: string): string`
 
-- [ ] **Step 1: Write failing test `version-truth.test.ts` for fallback removal**
+- [x] **Step 1: Write failing test `version-truth.test.ts` for fallback removal**
 
 ```ts
 import { expect, test } from "bun:test"
@@ -95,7 +95,7 @@ test("getCanonical matches package.json", () => {
 
 Run: `bun test generator/tests/version-truth.test.ts` -> FAIL (module missing).
 
-- [ ] **Step 2: Implement `starter-version.ts`**
+- [x] **Step 2: Implement `starter-version.ts`**
 
 ```ts
 import { readFileSync, existsSync } from "node:fs"
@@ -122,11 +122,11 @@ export function resolveTargetVersion(userTo?: string): string {
 }
 ```
 
-- [ ] **Step 3: Update `manifest.ts` to delegate and drop fallback**
+- [x] **Step 3: Update `manifest.ts` to delegate and drop fallback**
 
 Replace `getStarterVersion()` body with `return getCanonicalStarterVersion()` and `createManifest` fallback `"0.10.1"` with canonical or throw.
 
-- [ ] **Step 4: Update `registry.ts` STARTER_VERSION**
+- [x] **Step 4: Update `registry.ts` STARTER_VERSION**
 
 ```ts
 import { getCanonicalStarterVersion } from "../src/starter-version"
@@ -135,11 +135,11 @@ export const STARTER_VERSION = getCanonicalStarterVersion()
 
 Add guard if import circular, use lazy.
 
-- [ ] **Step 5: Run test**
+- [x] **Step 5: Run test**
 
 `bun test generator/tests/version-truth.test.ts` -> PASS
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add generator/src/starter-version.ts generator/src/manifest.ts generator/updates/registry.ts generator/tests/version-truth.test.ts
@@ -155,7 +155,7 @@ git commit -m "fix: canonical version source, remove fallback"
 - Consumes: `resolveTargetVersion`
 - Produces: `toVersion === canonical` in JSON/human/manifest
 
-- [ ] **Step 1: Write failing test for mismatch rejection**
+- [x] **Step 1: Write failing test for mismatch rejection**
 
 ```ts
 test("diff --to mismatch fails read-only", async () => {
@@ -170,17 +170,17 @@ test("diff --to mismatch fails read-only", async () => {
 
 Expected FAIL (still accepts 99.0.0).
 
-- [ ] **Step 2: Patch diff-project.ts**
+- [x] **Step 2: Patch diff-project.ts**
 
 Make `--to` optional; early `const canonical = resolveTargetVersion(to)` before `materializeToTemp`; use `canonical` for all outputs including `toVersion: canonical` and `buildUpdatePlan` toVersion override.
 
-- [ ] **Step 3: Patch update-project.ts similarly**, ensure manifest bump uses `canonical`.
+- [x] **Step 3: Patch update-project.ts similarly**, ensure manifest bump uses `canonical`.
 
-- [ ] **Step 4: Run version-truth suite**
+- [x] **Step 4: Run version-truth suite**
 
 `bun test generator/tests/version-truth.test.ts` now passes mismatch case.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add generator/src/diff-project.ts generator/src/update-project.ts generator/tests/version-truth.test.ts
@@ -197,7 +197,7 @@ git commit -m "fix: bind --to to canonical, reject mismatches"
 - Consumes: `resolveUpdatePath`
 - Produces: `updatePath` in JSON, blocking semantics, ordered execution
 
-- [ ] **Step 1: Write failing test for missing path**
+- [x] **Step 1: Write failing test for missing path**
 
 ```ts
 test("diff with missing path fails", async () => {
@@ -205,7 +205,7 @@ test("diff with missing path fails", async () => {
 })
 ```
 
-- [ ] **Step 2: Implement registry calls**
+- [x] **Step 2: Implement registry calls**
 
 In `diff-project.ts` after version resolve:
 ```ts
@@ -216,7 +216,7 @@ If throws, emit `valid:false` with error and exit 1. Include `updatePath: update
 
 In `update-project.ts` apply path: check `requiresManual` and `updatePlan.files.some(f=>f.classification==="manual-migration")` → block. Loop `for(const u of updatePath){ if(u.plan) ... }` collect.
 
-- [ ] **Step 3: Dedupe appliedUpdates**
+- [x] **Step 3: Dedupe appliedUpdates**
 
 ```ts
 const ids = updatePath.map(u=>u.id)
@@ -225,11 +225,11 @@ const nextApplied = [...new Set([...manifest.appliedUpdates, ...ids])]
 
 Write only after validations.
 
-- [ ] **Step 4: Run registry-integration tests**
+- [x] **Step 4: Run registry-integration tests**
 
 `bun test generator/tests/registry-integration.test.ts` -> PASS (cases: empty, missing, downgrade, manual block, rollback via injected throw, dedup)
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add generator/src/diff-project.ts generator/src/update-project.ts generator/tests/registry-integration.test.ts
@@ -245,7 +245,7 @@ git commit -m "fix: integrate registry path, block incomplete/manual"
 - Consumes: `mergePackageJson`, `mergeEnvExample`
 - Produces: `applyFileOperation(opts)` throwing on unsupported
 
-- [ ] **Step 1: Write failing test for preserve**
+- [x] **Step 1: Write failing test for preserve**
 
 ```ts
 test("package.json merge preserves local script", () => {
@@ -258,11 +258,11 @@ test("package.json merge preserves local script", () => {
 
 Currently `update-project` still copies, test for copy path fails.
 
-- [ ] **Step 2: Fix `mergePackageJson` to throw on parse error**
+- [x] **Step 2: Fix `mergePackageJson` to throw on parse error**
 
 Replace `catch { return nextContent }` with `throw new GenerationError("invalid JSON")`.
 
-- [ ] **Step 3: Add dispatcher**
+- [x] **Step 3: Add dispatcher**
 
 ```ts
 export function applyFileOperation({operation, projectPath, canonicalPath}: ApplyOpts){
@@ -274,17 +274,17 @@ export function applyFileOperation({operation, projectPath, canonicalPath}: Appl
 }
 ```
 
-- [ ] **Step 4: Update `update-plan.ts` to emit conflict for unsupported structured**
+- [x] **Step 4: Update `update-plan.ts` to emit conflict for unsupported structured**
 
 If `getFileStrategy(rel)==="structured"` and not in allow-list, push `conflict` with reason `"no safe merger for structured file"` otherwise classify normal.
 
-- [ ] **Step 5: Wire in `update-project.ts`** replace copy for `update-safe` with dispatcher + hash final content.
+- [x] **Step 5: Wire in `update-project.ts`** replace copy for `update-safe` with dispatcher + hash final content.
 
-- [ ] **Step 6: Run suite**
+- [x] **Step 6: Run suite**
 
 `bun test generator/tests/file-strategies.test.ts` PASS.
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 ```bash
 git add generator/src/file-strategies.ts generator/src/update-plan.ts generator/src/update-project.ts generator/tests/file-strategies.test.ts
@@ -301,23 +301,23 @@ git commit -m "fix: structured dispatch failing closed"
 - Consumes: `getCanonicalStarterVersion`, `getFileStrategy`
 - Produces: correct `baselineHash`+`strategy`, materializable guard
 
-- [ ] **Step 1: Write failing test for hash**
+- [x] **Step 1: Write failing test for hash**
 
 Create baseline temp, modify one file, adopt with --baseline canonical, assert manifest entry equals baseline hash not local.
 
-- [ ] **Step 2: Fix adopt**
+- [x] **Step 2: Fix adopt**
 
 Change `managedFiles[rel] = {baselineHash: projectHash}` to `baselineHash` canonical, `strategy: getFileStrategy(rel)`. Add guard `if(baseline !== getCanonicalStarterVersion()) throw new GenerationError("baseline ... not materializable")`.
 
-- [ ] **Step 3: Report missing**
+- [x] **Step 3: Report missing**
 
 Ensure missing loop reports and skips managedFiles.
 
-- [ ] **Step 4: Run**
+- [x] **Step 4: Run**
 
 `bun test generator/tests/adopt.test.ts` PASS.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add generator/src/adopt-project.ts generator/tests/adopt.test.ts
@@ -335,11 +335,11 @@ git commit -m "fix: adopt stores canonical hash and strategy"
 - Consumes: projectDir, extraIds from registry
 - Produces: `{ok, failedId, output}` with timeout
 
-- [ ] **Step 1: Write failing test for validation rollback**
+- [x] **Step 1: Write failing test for validation rollback**
 
 Spawn temp project, inject type error file into canonical, run update --apply, expect rollback.
 
-- [ ] **Step 2: Implement runner**
+- [x] **Step 2: Implement runner**
 
 ```ts
 export const VALIDATIONS: Record<string,{cmd:string, required:"required"|"optional"} > = {
@@ -352,13 +352,13 @@ export function runPostValidations(projectDir:string, extra:string[]): {ok:boole
 
 Dry-run guard: skip in diff and `update` without --apply.
 
-- [ ] **Step 3: Wire into update apply**: union registry `postValidations` + base `["typecheck"]`, call runner, on `!ok` throw → rollback.
+- [x] **Step 3: Wire into update apply**: union registry `postValidations` + base `["typecheck"]`, call runner, on `!ok` throw → rollback.
 
-- [ ] **Step 4: Run**
+- [x] **Step 4: Run**
 
 `bun test generator/tests/post-validations.test.ts` PASS.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add generator/src/validate-post.ts generator/src/update-project.ts generator/tests/post-validations.test.ts
@@ -375,23 +375,23 @@ git commit -m "fix: allow-list validations with rollback"
 **Interfaces:**
 - Produces: sync guard, manual-migration classification
 
-- [ ] **Step 1: Write failing sync test**
+- [x] **Step 1: Write failing sync test**
 
 ```ts
 test("STARTER_VERSION sync", () => { expect(STARTER_VERSION).toBe(JSON.parse(readFileSync("package.json","utf8")).version) })
 ```
 
-- [ ] **Step 2: In update-plan classify migrations/**
+- [x] **Step 2: In update-plan classify migrations/**
 
 If `rel.startsWith("migrations/")` and `canonicalHash !== baselineHash` and `projectHash !== baselineHash` → `manual-migration`; same for `_journal.json`.
 
-- [ ] **Step 3: Rewrite docs/updating...md** – state real --to source, list only package.json/.env.example merges, enumerate validations, add Limitations.
+- [x] **Step 3: Rewrite docs/updating...md** – state real --to source, list only package.json/.env.example merges, enumerate validations, add Limitations.
 
-- [ ] **Step 4: Run**
+- [x] **Step 4: Run**
 
 `bun test generator/tests/version-sync.test.ts` PASS.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add generator/updates/registry.ts generator/src/update-plan.ts generator/tests/version-sync.test.ts docs/updating-generated-projects.md
@@ -407,17 +407,17 @@ git commit -m "fix: version sync guard, manual-migration, docs honesty"
 - Consumes: tmp-project helper, diff/update/doctor binaries
 - Produces: temp-dir evidence
 
-- [ ] **Step 1: Write E2E test covering happy path + idempotence + rollback**
+- [x] **Step 1: Write E2E test covering happy path + idempotence + rollback**
 
 Steps: create fixture at canonical-1 fake version (use manifest override to simulate prior), personalize, doctor, diff assert, resolve conflict, update --apply assert merges/hashes/appliedUpdates/backup, repeat idempotence, inject validation failure via bad TS file and assert rollback.
 
-- [ ] **Step 2: Add edge matrix within same file** (fictitious --to, downgrade, missing path, .env untouched, upstream-removed-but-customized, upstream-new-but-local-different, copy-fail rollback via mocked copyFileSync throw, subdirectory, JSON stability)
+- [x] **Step 2: Add edge matrix within same file** (fictitious --to, downgrade, missing path, .env untouched, upstream-removed-but-customized, upstream-new-but-local-different, copy-fail rollback via mocked copyFileSync throw, subdirectory, JSON stability)
 
-- [ ] **Step 3: Run**
+- [x] **Step 3: Run**
 
 `bun test generator/tests/e2e-update.test.ts --timeout 60000` -> PASS (may be skipped if external DB required branches marked)
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add generator/tests/e2e-update.test.ts
@@ -429,18 +429,18 @@ git commit -m "test: e2e update cycle and edge matrix"
 **Files:**
 - Modify: `docs/verification-generated-project-update-vnext.md`
 
-- [ ] **Step 1: Fill O1–O8 rows with CONFIRMED/PART/REJECT and evidence lines (file:line, command output snippets, hashes)**
+- [x] **Step 1: Fill O1–O8 rows with CONFIRMED/PART/REJECT and evidence lines (file:line, command output snippets, hashes)**
 
 Example row:
 ```
 | O1 | --to not bound | CONFIRMED | diff-project.ts:30, update-project.ts:78 via `bun run generator:diff --to 99.0.0` echoes 99 | canonical gate added in starter-version.ts |
 ```
 
-- [ ] **Step 2: Run full verification command set and paste outputs**
+- [x] **Step 2: Run full verification command set and paste outputs**
 
 `bun run generator:validate; bun run lint; bun x tsc --noEmit; bun test` -> log in report.
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 git add docs/verification-generated-project-update-vnext.md
@@ -452,9 +452,9 @@ git commit -m "docs: verification matrix O1-O8 with evidence"
 **Files:**
 - Check: `git diff --check`, `git status --short`, `bun.lock` unchanged
 
-- [ ] **Step 1: Run `bun run lint`, `bun x tsc --noEmit`, `bun test --coverage` clean** – record PASS.
+- [x] **Step 1: Run `bun run lint`, `bun x tsc --noEmit`, `bun test --coverage` clean** – record PASS.
 
-- [ ] **Step 2: Manual smoke in temp root**
+- [x] **Step 2: Manual smoke in temp root**
 
 ```bash
 TMP=$(mktemp -d)
@@ -467,20 +467,20 @@ bun run generator:diff -- --project $TMP/smoke --json  # idempotent
 
 Verify no writes on dry-run, correct bump.
 
-- [ ] **Step 3: No runtime dep grep**
+- [x] **Step 3: No runtime dep grep**
 
 `rg -n "api-starter" apps/api/src packages modules --glob '!*manifest*' || echo "clean"`
 
-- [ ] **Step 4: Commit if docs touched, else no commit needed**
+- [x] **Step 4: Commit if docs touched, else no commit needed**
 
 ### Task 12: Guard and review
 
 **Files:**
 - none
 
-- [ ] **Step 1: Ensure all tasks.md checked**
+- [x] **Step 1: Ensure all tasks.md checked**
 
-- [ ] **Step 2: Run `comet guard fix-generated-project-update-safety build --apply`**
+- [x] **Step 2: Run `comet guard fix-generated-project-update-safety build --apply`**
 
-- [ ] **Step 3: Request lightweight review (`review_mode: standard`) before verify**
+- [x] **Step 3: Request lightweight review (`review_mode: standard`) before verify**
 
