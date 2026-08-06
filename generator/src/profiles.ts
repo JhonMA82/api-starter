@@ -4,13 +4,16 @@ export interface ProfileDefinition {
   id: string;
   description: string;
   features: readonly string[];
+  deprecated?: boolean;
+  deprecatedReason?: string;
+  replacementProfiles?: readonly string[];
 }
 
 export const PROFILES: readonly ProfileDefinition[] = [
   {
-    id: "minimal",
-    description: "Public APIs without persistence or user accounts (spec §4.1)",
-    features: [],
+    id: "authenticated",
+    description: "Single-tenant applications with user accounts (spec §4.3)",
+    features: ["auth", "authorization", "persistence"],
   },
   {
     id: "data-api",
@@ -18,41 +21,65 @@ export const PROFILES: readonly ProfileDefinition[] = [
     features: ["persistence"],
   },
   {
-    id: "authenticated",
-    description: "Single-tenant applications with user accounts (spec §4.3)",
-    features: ["persistence", "auth", "authorization"],
+    id: "integration-platform",
+    description: "Platform integrating external systems with async processing (spec §4.5)",
+    features: [
+      "apiKeys",
+      "audit",
+      "auth",
+      "authorization",
+      "jobs",
+      "persistence",
+      "tenancy",
+      "webhooks",
+    ],
+  },
+  {
+    id: "minimal",
+    description: "Public APIs without persistence or user accounts (spec §4.1)",
+    features: [],
   },
   {
     id: "multi-tenant",
-    description: "One installation serving multiple organizations (spec §4.4)",
+    description:
+      "One installation serving multiple organizations — deprecated, use multi-tenant-core/integration-platform/platform (spec §4.4 legacy)",
     features: [
-      "persistence",
+      "apiKeys",
+      "audit",
       "auth",
       "authorization",
-      "tenancy",
-      "audit",
-      "apiKeys",
-      "jobs",
-      "webhooks",
       "files",
+      "jobs",
       "notifications",
+      "persistence",
+      "tenancy",
+      "webhooks",
     ],
+    deprecated: true,
+    deprecatedReason:
+      "Use multi-tenant-core, integration-platform, or platform. Will be reconsidered for removal in 0.11.0.",
+    replacementProfiles: ["multi-tenant-core", "integration-platform", "platform"],
+  },
+  {
+    id: "multi-tenant-core",
+    description: "SaaS multi-tenant core without integrations (spec §4.4 core)",
+    features: ["audit", "auth", "authorization", "persistence", "tenancy"],
   },
   {
     id: "platform",
     description: "All production capabilities, including observability (spec §4.6)",
     features: [
-      "persistence",
+      "apiKeys",
+      "audit",
       "auth",
       "authorization",
-      "tenancy",
-      "audit",
-      "apiKeys",
-      "jobs",
-      "webhooks",
       "files",
+      "jobs",
       "notifications",
       "observability",
+      "persistence",
+      "tenancy",
+      "webhooks",
     ],
   },
 ];

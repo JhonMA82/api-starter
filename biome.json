@@ -6,7 +6,16 @@
     "useIgnoreFile": true
   },
   "files": {
-    "includes": ["**", "!migrations"]
+    "includes": [
+      "**",
+      "!migrations",
+      "!docs/openspec",
+      "!docs/superpowers",
+      "!.superpowers",
+      "!.comet",
+      "!.agents",
+      "!.opencode"
+    ]
   },
   "linter": {
     "enabled": true,

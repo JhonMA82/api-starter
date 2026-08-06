@@ -1,0 +1,16 @@
+{
+  "change": "doctor-diff-update-engine",
+  "phase": "design",
+  "mode": "compact",
+  "canonical_spec": "openspec",
+  "generated_by": "comet-handoff.sh",
+  "context_hash": "273717f5011b8b964e74994bea872b08d1fd24721a041e04e8176fdc3e0906d7",
+  "files": [
+    { "path": "docs/openspec/changes/doctor-diff-update-engine/proposal.md", "sha256": "e7bfa515ca7b34796f1a6aa46f0a325cb11c25c7bb735d624faf5b8896b9705b" },
+    { "path": "docs/openspec/changes/doctor-diff-update-engine/design.md", "sha256": "431af0ccbfe07b8ac1974daf8b8605e30038cce6efeaae4186faffcb40e77f68" },
+    { "path": "docs/openspec/changes/doctor-diff-update-engine/tasks.md", "sha256": "4b3b284a38a955371d9fa18238b3e8259e7f037fdd1aeb2f9686dcba3e6b6f07" },
+    { "path": "docs/openspec/changes/doctor-diff-update-engine/specs/generator-diff/spec.md", "sha256": "cd0b37597dcb481186e9d094cb69f4475b64979bdbc86e43ee70e2b143bfffb8" },
+    { "path": "docs/openspec/changes/doctor-diff-update-engine/specs/generator-doctor/spec.md", "sha256": "3378ad123147f16b76edbc3a41083d08508b26f448ae04cc0f55b89e88095441" },
+    { "path": "docs/openspec/changes/doctor-diff-update-engine/specs/generator-update/spec.md", "sha256": "0476e3eab72e378b088a0b6aab7194ff348dba679922e5b5a07dc0e51772a648" }
+  ]
+}

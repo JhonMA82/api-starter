@@ -5,6 +5,29 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.11.0] - 2026-08-06
+
+### Added
+
+- **Granular profiles (Parte A):** nuevos perfiles `multi-tenant-core` (persistence, auth, authorization, tenancy, audit) e `integration-platform` (core + apiKeys, jobs, webhooks); `platform` ahora es la unión completa salvo `dynamicRoles`; `multi-tenant` preservado como alias **deprecated** con `replacementProfiles: [multi-tenant-core, integration-platform, platform]` y advertencia a stderr. Soporte para composición exacta por features: `bun run create:project -- --features=persistence,auth,... --out=...` y `bun run create:project -- --profile=multi-tenant-core --with=files,notifications --out=...` con clausura transitiva, rechazo de `excludedBy`, orden determinista y `planFeatureSet`/`planFromSelection` como planner puro único. Flags `--list-profiles`/`--list-features` (con `--json`) en `create:project` y `generator:validate`.
+- **Validación reforzada:** `generator:validate` verifica IDs únicos, features conocidas, deps transitivas, conflictos, ciclos, orden determinista, reemplazos deprecated válidos y que `platform` == unión completa salvo diferidas.
+- **Manifiesto versionado (Parte B):** `.api-starter/manifest.json` (schema 1, `starter` + `generation` + `managedFiles` con `sha256:` + `appliedUpdates`), `generator/src/manifest.ts` (validación estricta, escritura atómica `tmp→rename`, orden estable), `generator/src/hashing.ts` (SHA-256), `generator/src/materialize.ts` (`materializeToTemp` compartido). `create:project` emite el manifiesto y mantiene `GENERATED.md` como vista humana; `add:feature` lo parchea atómicamente; `readManifestOrLegacy` mantiene compatibilidad con warning.
+- **Adopción legacy:** `bun run generator:adopt -- --project=../legacy --baseline=0.10.1` lee `GENERATED.md` solo como entrada, valida contra el catálogo, compara contra baseline materializado, reporta `intact`/`customized`/`missing` y crea el manifiesto solo si es verificable.
+- **Doctor / Diff / Update (Parte C):** `generator:doctor` (11 checks, `--json`, `git-dirty` como warning), `generator:diff` (read-only, materializa canónica con mismas features, clasifica `add`/`update-safe`/`remove-safe`/`unchanged`/`customized-no-upstream`/`conflict`/`manual-migration`, exit 1 si conflicto), `generator:update` (dry-run sin `--apply`, sin `--force` global, aborta con conflictos, backup en `.api-starter/backups/<ts>/`, determinista, post-validación `typecheck`/`test`, rollback automático y bump de manifiesto solo al final, idempotente). `file-strategies.ts` (`managed`/`structured`/`scaffold`/`ignored`) con merge conservador para `package.json` y `.env.example`; nunca toca `.env`.
+- **Migraciones versionadas (Parte D):** `generator/updates/registry.ts` (`STARTER_VERSION`, `Update` con `plan` puro, `resolveUpdatePath` SemVer secuencial sin saltos, idempotente), `generator/updates/0.10.1-to-0.11.0.ts` ejemplo, manejo de `migrations/meta/_journal.json` con detección de colisiones, `manual-migration` para tenancy, sin `db:migrate` automático.
+- **Gobernanza (Parte E):** `docs/decisions/0013-starter-evolution-and-update-policy.md` (qué es/no es el starter, políticas Core/Feature/Recipe/Dominio, compatibilidad, propiedad del código, estrategia de actualización, prohibición de framework privado, admisión y presupuesto de complejidad), `docs/feature-proposal-template.md` (10 puertas), `docs/updating-generated-projects.md` (flujo `doctor`→`diff`→`update`→`adopt` y resolución de conflictos), `generator/updates/registry.ts` como fuente de verdad.
+- **Docs y scripts:** `docs/architecture.md` (sección Generador con perfiles granulares y flags), `README.md` (comandos con nuevos perfiles y `--features`/`--with`), `package.json` scripts `generator:doctor`/`generator:diff`/`generator:update`/`generator:adopt`, `biome.json` ignora `docs/openspec`/`docs/superpowers`/`.superpowers`/`.comet` para `lint`.
+
+### Changed
+
+- `generator/profiles.json` y `generator/src/profiles.ts` ahora con 7 entradas ordenadas alfabéticamente y `features` sorted; `PROFILES` espejo via `sync-manifests.ts`.
+- `generator/src/plan.ts` con `parseCsv`/`closeTransitive`/`planFromSelection` y `planFeatureSet` con cierre transitivo automático.
+- `generator/src/create-project.ts` con `generateProjectFromPlan`, `excludePath` ampliado a `.agents/.opencode/.comet/.superpowers` y `collectManagedFiles` para el manifiesto.
+
+### Deprecated
+
+- Perfil `multi-tenant` marcado `deprecated: true` con `deprecatedReason` y `replacementProfiles`; su eliminación se reconsiderará en `0.12.0`.
+
 ## [0.10.1] - 2026-08-05
 
 ### Changed

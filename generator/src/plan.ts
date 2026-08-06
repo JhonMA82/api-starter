@@ -1,5 +1,6 @@
-import { UnknownFeatureError, UnknownProfileError } from "./errors";
+import { GenerationError, UnknownFeatureError, UnknownProfileError } from "./errors";
 import { getFeature } from "./features";
+import { getProfile } from "./profiles";
 import { validateFeatureSet, validateProfile } from "./validate";
 
 /**
@@ -268,21 +269,96 @@ function buildProjectPlan(profileId: string, features: readonly string[]): Proje
   };
 }
 
+export function parseCsv(csv: string): string[] {
+  return [
+    ...new Set(
+      csv
+        .split(",")
+        .map((s) => s.trim())
+        .filter(Boolean),
+    ),
+  ];
+}
+
+export function closeTransitive(ids: string[]): string[] {
+  const result = new Set(ids);
+  const visiting = new Set<string>();
+  function visit(id: string): void {
+    if (visiting.has(id)) {
+      throw new GenerationError(`cycle detected at "${id}"`);
+    }
+    visiting.add(id);
+    const feature = getFeature(id);
+    for (const req of feature.requires) {
+      if (!result.has(req)) {
+        result.add(req);
+        visit(req);
+      }
+    }
+    visiting.delete(id);
+  }
+  for (const id of [...result]) {
+    visit(id);
+  }
+  return [...result];
+}
+
 /**
- * Computes the materialization plan for an arbitrary, already-normalized
- * feature set. This is deliberately pure so incremental tooling can plan a
- * generated project without pretending that it matches a named profile.
+ * Computes the materialization plan for an arbitrary feature set, closing
+ * transitive requirements automatically and sorting deterministically.
+ * This is deliberately pure so incremental tooling can plan a generated
+ * project without pretending that it matches a named profile.
  */
 export function planFeatureSet(features: readonly string[], profileId = "custom"): ProjectPlan {
-  const issues = validateFeatureSet(features);
+  const deduped = [...new Set(features)].sort();
+  const unknownIssues = validateFeatureSet(deduped).filter((i) => i.kind === "unknown-feature");
+  if (unknownIssues.length > 0) {
+    const first = unknownIssues[0];
+    if (first) {
+      throw new UnknownFeatureError(first.feature);
+    }
+  }
+  const closed = closeTransitive(deduped).sort();
+  const issues = validateFeatureSet(closed);
   const unknown = issues.find((issue) => issue.kind === "unknown-feature");
   if (unknown !== undefined) {
     throw new UnknownFeatureError(unknown.feature);
   }
   if (issues.length > 0) {
-    throw new Error(`feature set is invalid: ${issues.map((issue) => issue.message).join("; ")}`);
+    throw new GenerationError(
+      `feature set is invalid: ${issues.map((issue) => issue.message).join("; ")}`,
+    );
   }
-  return buildProjectPlan(profileId, features);
+  return buildProjectPlan(profileId, closed);
+}
+
+export function planFromSelection(opts: {
+  profile?: string | undefined;
+  featuresCsv?: string | undefined;
+  withCsv?: string | undefined;
+}): ProjectPlan {
+  if (opts.featuresCsv && (opts.profile || opts.withCsv)) {
+    throw new GenerationError(
+      "ambiguous: use either --profile or --features, not both (got --features with --profile/--with)",
+    );
+  }
+  if (opts.withCsv && !opts.profile) {
+    throw new GenerationError("--with requires --profile");
+  }
+  if (opts.featuresCsv) {
+    const feats = parseCsv(opts.featuresCsv);
+    return planFeatureSet(feats, "custom");
+  }
+  if (opts.profile && opts.withCsv) {
+    const base = getProfile(opts.profile);
+    const extra = parseCsv(opts.withCsv);
+    const merged = [...new Set([...base.features, ...extra])];
+    return planFeatureSet(merged, opts.profile);
+  }
+  if (opts.profile) {
+    return planProject(opts.profile);
+  }
+  throw new GenerationError("either --profile or --features is required");
 }
 
 /**
@@ -298,5 +374,5 @@ export function planProject(profileId: string): ProjectPlan {
     const details = validated.errors.map((issue) => issue.message).join("; ");
     throw new Error(`profile "${profileId}" is invalid: ${details}`);
   }
-  return buildProjectPlan(profileId, validated.features);
+  return planFeatureSet(validated.features, profileId);
 }

@@ -130,7 +130,7 @@ describe("planProject", () => {
 
   test("authenticated keeps auth+authorization packages but no organizations module", () => {
     const plan = planProject("authenticated");
-    expect(plan.features).toEqual(["persistence", "auth", "authorization"]);
+    expect([...plan.features].sort()).toEqual(["auth", "authorization", "persistence"].sort());
     expect(plan.keepPackages).toContain("auth");
     expect(plan.keepPackages).toContain("auth-client");
     expect(plan.keepPackages).toContain("authorization");
@@ -334,7 +334,15 @@ describe("template selection", () => {
 
   test("every profile maps to existing template variants", () => {
     const templatesDir = path.join(repoRoot, "generator", "templates", "app");
-    for (const profileId of ["minimal", "data-api", "authenticated", "multi-tenant", "platform"]) {
+    for (const profileId of [
+      "minimal",
+      "data-api",
+      "authenticated",
+      "multi-tenant",
+      "multi-tenant-core",
+      "integration-platform",
+      "platform",
+    ]) {
       const selection = selectTemplates(planProject(profileId));
       expect(existsSync(path.join(templatesDir, selection.app))).toBe(true);
       expect(existsSync(path.join(templatesDir, selection.routes))).toBe(true);
@@ -450,7 +458,9 @@ describe("create-project end-to-end", () => {
       const expectedFiles = walkFiles(repoRoot)
         .filter((rel) => !excludePath(rel))
         .filter((rel) => !isUnder(rel, computeRemoveList(plan)));
-      expect(walkFiles(out)).toEqual([...expectedFiles, "GENERATED.md"].sort());
+      expect(walkFiles(out)).toEqual(
+        [...expectedFiles, "GENERATED.md", ".api-starter/manifest.json"].sort(),
+      );
 
       expect(() => generateProject("minimal", out)).toThrow(GenerationError);
       expect(() => generateProject("minimal", out)).toThrow(/--force/);

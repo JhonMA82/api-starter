@@ -79,8 +79,8 @@ Alternativa con Docker Compose: `docker compose --profile database up -d postgre
 | `bun run worker` | worker del outbox (envío de eventos y webhooks en segundo plano) |
 | `bun run db:generate` | regenerar migraciones desde los schemas (gate de drift en CI) |
 | `bun run db:backup` / `db:restore` | volcado/restauración pg_dump (ver [`docs/backup-restore.md`](docs/backup-restore.md)) |
-| `bun run generator:validate` | valida el catálogo del generador |
-| `bun run create:project` | genera un proyecto nuevo (ver [generador](docs/architecture.md#generador)) |
+| `bun run generator:validate` | valida el catálogo del generador (`--list-profiles`/`--list-features` para descubrir) |
+| `bun run create:project` | genera un proyecto nuevo (perfiles: `minimal`, `data-api`, `authenticated`, `multi-tenant-core`, `integration-platform`, `platform`; `multi-tenant` deprecated; `--features` y `--with` para composición exacta) (ver [generador](docs/architecture.md#generador)) |
 | `bun run add:feature` / `create:module` | añade features o módulos a un proyecto generado |
 
 ## Endpoints
@@ -191,7 +191,9 @@ api/
 ## Documentación
 
 - [`docs/architecture.md`](docs/architecture.md) — visión, capas, y catálogo de funcionalidades
-- [`docs/decisions/`](docs/decisions/) — ADR (decisiones de arquitectura, en inglés)
+- [`docs/decisions/`](docs/decisions/) — ADR (decisiones de arquitectura, en inglés) — ver `0013-starter-evolution-and-update-policy.md` para perfiles/features y política de actualización
+- [`docs/updating-generated-projects.md`](docs/updating-generated-projects.md) — guía de actualización de proyectos generados (`doctor`/`diff`/`update`/`adopt`)
+- [`docs/feature-proposal-template.md`](docs/feature-proposal-template.md) — plantilla para proponer features (puerta de admisión)
 - [`docs/migrations-runbook.md`](docs/migrations-runbook.md) — guía de migraciones
 - [`docs/backup-restore.md`](docs/backup-restore.md) — runbook de backup/restore
 - [`docs/load-test.md`](docs/load-test.md) y [`docs/load-test-results.md`](docs/load-test-results.md) — load test reproducible y resultados

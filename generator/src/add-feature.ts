@@ -12,6 +12,8 @@ import path from "node:path";
 import { repositoryRoot } from "./create-project";
 import { GenerationError } from "./errors";
 import { getFeature } from "./features";
+import { hashFileContent } from "./hashing";
+import { readManifest, writeManifest } from "./manifest";
 import { filterMigrationJournal, snapshotNameFor } from "./migrations";
 import { PERSISTENCE_MODULES, type ProjectPlan, planFeatureSet } from "./plan";
 import { getProfile } from "./profiles";
@@ -801,6 +803,63 @@ export function addFeature(options: AddFeatureOptions): AddFeatureResult {
     }
     if (featurePlanChanged) {
       writeFileSync(featurePlanPath, nextFeaturePlan);
+    }
+  }
+
+  if (!dryRun) {
+    try {
+      const existingManifest = readManifest(projectRoot);
+      const now = new Date().toISOString();
+      const updatedManagedFiles: Record<string, { baselineHash: string; strategy: string }> = {
+        ...existingManifest.managedFiles,
+      };
+      const allPaths = [...resources.copiedPaths, ...resources.rewrittenPaths];
+      for (const rel of allPaths) {
+        const targetPath = path.join(projectRoot, rel);
+        if (existsSync(targetPath) && !statSync(targetPath).isDirectory()) {
+          try {
+            const content = readFileSync(targetPath, "utf8");
+            const baselineHash = hashFileContent(content);
+            const existing = existingManifest.managedFiles[rel];
+            const strategy =
+              existing?.strategy ??
+              (rel === "package.json" ||
+              rel === "apps/api/package.json" ||
+              rel === "tsconfig.json" ||
+              rel === ".env.example" ||
+              rel === "drizzle.config.ts" ||
+              rel === "docker-compose.yml" ||
+              rel === "packages/config/src/env.ts"
+                ? "structured"
+                : "managed");
+            updatedManagedFiles[rel] = { baselineHash, strategy: strategy as never };
+          } catch {
+            // ignore binary or unreadable
+          }
+        }
+      }
+      const updatedManifestData = {
+        ...existingManifest,
+        generation: {
+          ...existingManifest.generation,
+          features: [...resultingFeatures].sort(),
+          updatedAt: now,
+        },
+        managedFiles: Object.fromEntries(
+          Object.entries(updatedManagedFiles).sort(([a], [b]) => a.localeCompare(b)),
+        ),
+      };
+      writeManifest(projectRoot, updatedManifestData as never);
+    } catch {
+      const legacyManifestPath = path.join(projectRoot, ".api-starter", "manifest.json");
+      if (!existsSync(legacyManifestPath)) {
+        const genPath = path.join(projectRoot, "GENERATED.md");
+        if (existsSync(genPath)) {
+          console.warn(
+            `⚠ No manifest found at ${legacyManifestPath}; found legacy GENERATED.md. Run bun run generator:adopt -- --project=${projectRoot} --baseline=<version> to migrate.`,
+          );
+        }
+      }
     }
   }
 

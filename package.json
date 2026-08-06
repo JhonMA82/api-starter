@@ -1,6 +1,6 @@
 {
   "name": "@consulting/api-starter",
-  "version": "0.10.1",
+  "version": "0.11.0",
   "private": true,
   "packageManager": "bun@1.3.14",
   "workspaces": [
@@ -26,6 +26,10 @@
     "db:down": "podman rm -f api-pg 2>/dev/null || true",
     "generator:sync": "bun generator/src/sync-manifests.ts",
     "generator:validate": "bun generator/src/cli-validate.ts",
+    "generator:doctor": "bun generator/src/project-doctor.ts",
+    "generator:diff": "bun generator/src/diff-project.ts",
+    "generator:update": "bun generator/src/update-project.ts",
+    "generator:adopt": "bun generator/src/adopt-project.ts",
     "add:feature": "bun generator/src/add-feature.ts",
     "create:project": "bun generator/src/create-project.ts",
     "create:module": "bun generator/src/create-module.ts"
