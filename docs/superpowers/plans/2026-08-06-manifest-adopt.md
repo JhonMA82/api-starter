@@ -6,7 +6,7 @@ base-ref: 8e63cee0b116b0c9a7c48b41ead2a09960420197
 
 # Versioned Manifest and Adopt Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [x]`) syntax for tracking.
 
 **Goal:** Introduce .api-starter/manifest.json with atomic hashing and adopt legacy projects.
 
@@ -28,10 +28,10 @@ base-ref: 8e63cee0b116b0c9a7c48b41ead2a09960420197
 - Create: generator/src/manifest.ts
 - Create: generator/src/materialize.ts
 
-- [ ] Step 1: Write failing test for hashing and manifest validation
-- [ ] Step 2: Implement hashing.ts SHA256
-- [ ] Step 3: Implement manifest.ts strict schema v1
-- [ ] Step 4: Implement materialize.ts shared helper
+- [x] Step 1: Write failing test for hashing and manifest validation
+- [x] Step 2: Implement hashing.ts SHA256
+- [x] Step 3: Implement manifest.ts strict schema v1
+- [x] Step 4: Implement materialize.ts shared helper
 
 ### Task 2: Generation integration
 
@@ -39,18 +39,18 @@ base-ref: 8e63cee0b116b0c9a7c48b41ead2a09960420197
 - Modify: generator/src/create-project.ts
 - Modify: generator/src/add-feature.ts
 
-- [ ] Step 1: Wire create-project to emit manifest atomically
-- [ ] Step 2: Update add:feature to patch manifest
-- [ ] Step 3: Ensure managedFiles excludes secrets/.env
+- [x] Step 1: Wire create-project to emit manifest atomically
+- [x] Step 2: Update add:feature to patch manifest
+- [x] Step 3: Ensure managedFiles excludes secrets/.env
 
 ### Task 3: Adopt
 
 **Files:**
 - Create: generator/src/adopt-project.ts
 
-- [ ] Step 1: Implement adopt CLI parsing GENERATED.md
-- [ ] Step 2: Report divergences before write
-- [ ] Step 3: Preserve legacy read path with warning
+- [x] Step 1: Implement adopt CLI parsing GENERATED.md
+- [x] Step 2: Report divergences before write
+- [x] Step 3: Preserve legacy read path with warning
 
 ### Task 4: Tests and docs
 
@@ -58,6 +58,6 @@ base-ref: 8e63cee0b116b0c9a7c48b41ead2a09960420197
 - Modify: generator/tests/manifest.test.ts
 - Modify: docs/architecture.md
 
-- [ ] Step 1: Add tests for manifest, hashing, adopt
-- [ ] Step 2: Update docs
-- [ ] Step 3: Run lint/typecheck/test and manifest generation for each profile
+- [x] Step 1: Add tests for manifest, hashing, adopt
+- [x] Step 2: Update docs
+- [x] Step 3: Run lint/typecheck/test and manifest generation for each profile
