@@ -2,6 +2,8 @@
 comet_change: migrations-governance
 role: technical-design
 canonical_spec: openspec
+archived-with: 2026-08-05-migrations-governance
+status: final
 ---
 
 # Technical Design: Governance and Update Registry

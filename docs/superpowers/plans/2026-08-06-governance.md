@@ -2,6 +2,7 @@
 change: migrations-governance
 design-doc: docs/superpowers/specs/2026-08-06-governance-design.md
 base-ref: 9bdeceeb289207529119c11a2f88c5a0b4ffc0a8
+archived-with: 2026-08-05-migrations-governance
 ---
 
 # Governance Implementation Plan

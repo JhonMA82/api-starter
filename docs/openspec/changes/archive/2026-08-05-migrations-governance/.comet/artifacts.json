@@ -1,0 +1,11 @@
+{
+  "openspec_proposal": "docs/openspec/changes/migrations-governance/proposal.md",
+  "openspec_design": "docs/openspec/changes/migrations-governance/design.md",
+  "openspec_tasks": "docs/openspec/changes/migrations-governance/tasks.md",
+  "openspec_delta_spec": "docs/openspec/changes/migrations-governance/specs/architecture-guardrails/spec.md",
+  "design_document": "docs/superpowers/specs/2026-08-06-governance-design.md",
+  "build_tasks_complete": "docs/openspec/changes/migrations-governance/tasks.md",
+  "handoff_context": "docs/openspec/changes/archive/2026-08-05-migrations-governance/.comet/handoff/design-context.json",
+  "handoff_markdown": "docs/openspec/changes/archive/2026-08-05-migrations-governance/.comet/handoff/design-context.md",
+  "archive_directory": "docs/openspec/changes/archive/2026-08-05-migrations-governance"
+}

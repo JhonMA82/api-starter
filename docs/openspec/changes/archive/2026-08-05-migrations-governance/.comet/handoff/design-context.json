@@ -1,0 +1,16 @@
+{
+  "change": "migrations-governance",
+  "phase": "design",
+  "mode": "compact",
+  "canonical_spec": "openspec",
+  "generated_by": "comet-handoff.sh",
+  "context_hash": "35b27313a1adc5273d9aca9b53ec63527a3c1a947f9d0ab9de7f0a3cac65494c",
+  "files": [
+    { "path": "docs/openspec/changes/migrations-governance/proposal.md", "sha256": "810a6add9549422f626b917000aa77d9ca68df9ce8d783cf006cc48d9e77568f" },
+    { "path": "docs/openspec/changes/migrations-governance/design.md", "sha256": "3297e665f35511eef82fe2e8da10e33334873b72b01f585afbd32af02e95f412" },
+    { "path": "docs/openspec/changes/migrations-governance/tasks.md", "sha256": "09b5771cfbcecc93eb8851295876383d419289700c326a3c806c2cbfa4c697ed" },
+    { "path": "docs/openspec/changes/migrations-governance/specs/architecture-guardrails/spec.md", "sha256": "0957ed3eaf05c8ee6488ca026ba047351c29c31dd4ce464225e4f154be0b69ee" },
+    { "path": "docs/openspec/changes/migrations-governance/specs/generator-updates/spec.md", "sha256": "491abb0c2f67fa891fd0e73338111a83af6f87ada1fddbfe5a3020f12dd510b0" },
+    { "path": "docs/openspec/changes/migrations-governance/specs/starter-governance/spec.md", "sha256": "58b48de84553e244d177763536f560c5248b4ae06067a3b7d823243656d3eef4" }
+  ]
+}
