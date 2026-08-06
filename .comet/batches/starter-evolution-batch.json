@@ -29,7 +29,7 @@
     },
     {
       "name": "versioned-manifest-adopt",
-      "status": "selected",
+      "status": "archived",
       "goals": "Sustituir GENERATED.md como fuente machine-readable por .api-starter/manifest.json versionado con hashes SHA-256, estrategias managed/structured/scaffold/ignored y adopción legacy",
       "scope": "generator/src/manifest.ts, generator/src/hashing.ts, generator/src/materialize.ts, generator/src/adopt-project.ts, GENERATED.md como vista derivada, add:feature actualizado",
       "nonGoals": "doctor/diff/update engine completo, migraciones versionadas del starter, políticas de conflicto avanzadas más allá de baselineHash",
@@ -41,7 +41,9 @@
       ],
       "dependencies": [
         "granular-profiles-composition"
-      ]
+      ],
+      "archivedAt": "2026-08-06T03:59:40.671485Z",
+      "branch": "feature/20260806/granular-profiles-composition"
     },
     {
       "name": "doctor-diff-update-engine",
@@ -76,5 +78,5 @@
       ]
     }
   ],
-  "updatedAt": "2026-08-06T03:45:00.020592Z"
+  "updatedAt": "2026-08-06T03:59:40.671653Z"
 }
