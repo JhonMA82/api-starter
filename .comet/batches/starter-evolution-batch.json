@@ -13,7 +13,7 @@
   "items": [
     {
       "name": "granular-profiles-composition",
-      "status": "selected",
+      "status": "archived",
       "goals": "Introducir perfiles granulares data-api, authenticated, multi-tenant-core, integration-platform, platform; deprecara multi-tenant y soportar composición personalizada por features",
       "scope": "generator/profiles.json, generator/features.json, generator/src/plan.ts, generator/src/profiles.ts, generator/src/validate.ts, generator/src/create-project.ts, CLI --features/--with/--list-profiles/--list-features, catalog validations",
       "nonGoals": "Manifiesto, doctor/diff/update, migraciones versionadas, ADR/gobernanza",
@@ -23,7 +23,9 @@
         "bun run create:project -- --features=persistence,auth produce proyecto equivalente a profile authenticated",
         "bun run generator:validate verifica IDs únicos, deps transitivas, ciclos, orden determinista y que platform == all features salvo diferidas"
       ],
-      "dependencies": []
+      "dependencies": [],
+      "archivedAt": "2026-08-06T03:40:57.666052Z",
+      "branch": "feature/20260806/granular-profiles-composition"
     },
     {
       "name": "versioned-manifest-adopt",
@@ -37,7 +39,9 @@
         "bun run generator:adopt -- --project=../legacy --baseline=0.1.0 migra desde GENERATED.md con reporte previo",
         "manifiesto corrupto o schema futuro es rechazado sin reparación silenciosa"
       ],
-      "dependencies": ["granular-profiles-composition"]
+      "dependencies": [
+        "granular-profiles-composition"
+      ]
     },
     {
       "name": "doctor-diff-update-engine",
@@ -51,7 +55,9 @@
         "update sin --apply es dry-run; con --apply respeta personalizaciones, crea backup, es determinista, valida typecheck/tests y revierte + no toca manifiesto si falla",
         "segunda ejecución de update es idempotente sin cambios"
       ],
-      "dependencies": ["versioned-manifest-adopt"]
+      "dependencies": [
+        "versioned-manifest-adopt"
+      ]
     },
     {
       "name": "migrations-governance",
@@ -65,8 +71,10 @@
         "checks verifican domain no importa Hono/Bun/DB, features no seleccionadas no dejan residuos, y no hay dependencia runtime hacia generador",
         "proyecto generado puede divergir sin paquete privado del starter"
       ],
-      "dependencies": ["doctor-diff-update-engine"]
+      "dependencies": [
+        "doctor-diff-update-engine"
+      ]
     }
   ],
-  "updatedAt": "2026-08-06T02:39:43.847563Z"
+  "updatedAt": "2026-08-06T03:40:57.666146Z"
 }
