@@ -10,6 +10,7 @@
 | [verification-reports/final-validation-0.10.0.md](verification-reports/final-validation-0.10.0.md) | Reporte de validación final del starter 0.10.0 | Evidencia cerrada de una versión anterior; no describe el estado actual |
 | [verification-reports/update-system-vnext-2026-08-06.md](verification-reports/update-system-vnext-2026-08-06.md) | Verificación del sistema doctor/diff/update (vNext) | Evidencia cerrada de implementación |
 | [verification-reports/load-test-results-2026-08-03.md](verification-reports/load-test-results-2026-08-03.md) | Resultados de carga del 2026-08-03 | Medición puntual en una máquina local; no es una garantía de rendimiento |
+| [verification-reports/closeout-0-11-0-minimal-validation.md](verification-reports/closeout-0-11-0-minimal-validation.md) | Verificación del cierre mínimo 0.11.0 (2026-08-06) | Evidencia cerrada del ciclo real 0.10.1 → 0.11.0 |
 
 ## Carpetas internas de herramientas
 

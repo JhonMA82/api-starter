@@ -47,7 +47,7 @@ bun run db:generate && git diff --exit-code    # gate de drift (migrations-check
 
 ## Jobs de CI y cómo reproducirlos
 
-`.github/workflows/ci.yml` ejecuta 8 jobs en cada pull request, todos con acciones fijadas por tag completo y `bun install --frozen-lockfile`:
+`.github/workflows/ci.yml` ejecuta 9 jobs en cada pull request (y en pushes a `main`; `workflow_dispatch` permite lanzarlo a mano), todos con acciones fijadas por tag completo y `bun install --frozen-lockfile`:
 
 | Job | Comando equivalente local |
 |---|---|

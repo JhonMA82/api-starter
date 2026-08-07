@@ -1,5 +1,7 @@
 # Verificación de cierre mínimo 0.11.0
 
+> **HISTÓRICO** — Verificación cerrada del cierre mínimo 0.11.0 (2026-08-06). Evidencia de implementación, no fuente vigente: ver [`docs/README.md`](../../README.md) y [`docs/maintainers/testing-and-ci.md`](../../maintainers/testing-and-ci.md).
+
 ## 1. Commit base auditado
 
 - Rama: `feature/20260806/granular-profiles-composition`
