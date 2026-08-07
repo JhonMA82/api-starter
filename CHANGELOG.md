@@ -5,6 +5,45 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Changed
+
+- **Documentation reorganization:** rewrote `README.md` as a landing page with two
+  explicit paths (create a new API / maintain the starter) and a functional
+  quickstart that generates a project; created `docs/README.md` as a
+  task-oriented index; split `docs/architecture.md` into
+  `docs/architecture/` (overview, layers-and-boundaries, capabilities,
+  generator-and-managed-files); split `docs/updating-generated-projects.md`
+  into `docs/guides/` (add-a-feature, update-a-generated-project,
+  adopt-a-legacy-project); moved runbooks to `docs/operations/`
+  (migrations, backup-and-restore, load-testing) with a standard header
+  (audience, prerequisites, risk, verification, rollback); moved the threat
+  model to `docs/security/threat-model.md`; added `docs/getting-started/`
+  (choose-a-profile, create-a-project, first-module) and
+  `docs/maintainers/` (development, testing-and-ci, releases-and-versioning,
+  evolution-policy, feature-proposal-template); added `docs/reference/`
+  (cli, environment, profiles-and-features, endpoints, repository-structure).
+- **Archive:** moved the original specification and closed verification
+  reports to `docs/archive/` (original-specification.md,
+  verification-reports/final-validation-0.10.0.md,
+  verification-reports/update-system-vnext-2026-08-06.md,
+  verification-reports/load-test-results-2026-08-03.md) with explicit
+  non-normative banners; `VALIDATION_REPORT.md` (root) removed in favor of
+  the archived report. `docs/openspec/` and `docs/superpowers/` stay in
+  place (tooling depends on exact paths) and are excluded from onboarding.
+- **Docs checks:** new `scripts/check-docs.ts` and `bun run docs:check`
+  (internal markdown links, renamed-path detection, `bun run` script
+  references against `package.json`, stale version detection in active docs,
+  catalog/reference sync); added the `docs` job to CI.
+- **Link migration:** updated references in `AGENTS.md`, ADR-0012/0013,
+  `Dockerfile`, `scripts/db/backup.ts`/`restore.ts` and the generator
+  exclusion list (the archived original spec is still excluded from
+  generated projects by basename).
+- **Version alignment:** `APP_VERSION` default in `packages/config`,
+  `.env.example`, `.env.test.example` and Docker `IMAGE_VERSION` aligned to
+  `0.11.0`.
+
 ## [0.11.0] - 2026-08-06
 
 ### Added

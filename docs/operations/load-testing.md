@@ -1,5 +1,10 @@
 # Prueba de carga reproducible
 
+- **Audiencia:** desarrolladores y operadores.
+- **Prerrequisitos:** servidor objetivo levantado (`bun run dev`), puerto libre.
+- **Riesgo:** bajo — el script solo emite HTTP; úsalo en local, no contra producción.
+- **Última medición:** 2026-08-03, v0.10.0, 0 errores a 20 workers en localhost — [verification-reports/load-test-results-2026-08-03.md](../archive/verification-reports/load-test-results-2026-08-03.md) (medición puntual, no garantía de rendimiento).
+
 `scripts/load-test.ts` es un generador de carga sin dependencias que usa
 exclusivamente el runtime estándar de Bun (`fetch`, `AbortSignal`,
 `performance`). Sirve como smoke test y harnés de regresión de rendimiento
@@ -91,7 +96,7 @@ Con `--summary=<archivo>` se escribe:
 ```
 
 `rate` es `null` cuando no se limitó la tasa. Los resultados reproducibles
-del starter se documentan en `docs/load-test-results.md`.
+del starter se documentan en `docs/archive/verification-reports/load-test-results-2026-08-03.md`.
 
 ## Integración con CI
 

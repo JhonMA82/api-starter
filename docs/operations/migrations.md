@@ -1,5 +1,10 @@
 # Runbook de migraciones
 
+- **Audiencia:** desarrolladores de proyectos con persistencia y operadores.
+- **Prerrequisitos:** `.env` con `DATABASE_URL`, podman o Docker para la base local, `bun run db:up` si usas el postgres del contenedor.
+- **Riesgo:** medio — aplicar una migración es irreversible (no hay down-migrations); las destructivas exigen revisión y backup previo.
+- **Última revisión:** 2026-08-06 (v0.11.0).
+
 Guía operativa para crear, aplicar y revisar migraciones de base de datos con
 Drizzle + postgres.js. Ver ADR-0005 para la decisión técnica.
 
@@ -52,6 +57,18 @@ DATABASE_URL=postgres://postgres:postgres@localhost:5432/api bun test --parallel
 El job `migrations-check` ejecuta `bun run db:generate` y luego
 `git diff --exit-code`: si el schema y las migraciones commitadas divergen, el
 job falla. `drizzle-kit check` NO detecta drift — generate + diff es el gate.
+
+## Verificación de éxito
+
+- `bun run db:migrate` termina sin errores; re-ejecutar es un no-op.
+- `bun run db:generate` + `git diff --exit-code` sin cambios (gate de drift).
+- En un proyecto generado con actualizaciones pendientes: `generator:doctor` no reporta migraciones no aplicadas.
+
+## Rollback y recuperación
+
+- Drizzle no genera down-migrations: **restaurar un backup** (`bun run db:restore --file ... --force`, ver [backup-and-restore.md](backup-and-restore.md)).
+- Un cambio incorrecto se corrige con una migración nueva (forward-fix), nunca editando la ya aplicada.
+- Las migraciones aplicadas son append-only; editarlas rompe el hash del journal y el gate de drift.
 
 ## Troubleshooting
 

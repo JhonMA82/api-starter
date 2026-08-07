@@ -14,7 +14,7 @@ Dumps the database with pg_dump --format=custom into a timestamped archive.
 The password is passed to pg_dump via PGPASSWORD and never appears in argv
 or logs. Override the pg_dump binary with PG_DUMP (a path or a command,
 e.g. "podman exec postgres pg_dump"). Requires pg_dump on PATH.
-See docs/backup-restore.md.`;
+See docs/operations/backup-and-restore.md.`;
 
 export function parseBackupArgs(argv: string[], defaultUrl?: string): BackupOptions {
   const parsed = parseCliArgs(argv);

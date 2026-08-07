@@ -18,7 +18,7 @@ dropping conflicting objects before recreating them).
 The password is passed to pg_restore/psql via PGPASSWORD and never appears
 in argv or logs. Override the binaries with PG_RESTORE / PSQL (a path or a
 command). Requires pg_restore and psql on PATH.
-See docs/backup-restore.md.`;
+See docs/operations/backup-and-restore.md.`;
 
 export function parseRestoreArgs(argv: string[], defaultUrl?: string): RestoreOptions {
   const parsed = parseCliArgs(argv);

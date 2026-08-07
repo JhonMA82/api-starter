@@ -101,7 +101,7 @@ const EXCLUDED_SEGMENTS = new Set([
 const EXCLUDED_BASENAMES = new Set([
   ".env",
   ".env.test",
-  "OPENCODE_HONO_BACKEND_REUTILIZABLE.md",
+  "original-specification.md",
   "OPENCODE_API_STARTER_VNEXT_MAINTENIBILIDAD.md",
   "CLAUDE.md",
   "skills-lock.json",

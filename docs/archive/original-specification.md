@@ -1,5 +1,7 @@
 # Especificación para crear un backend Hono reutilizable
 
+> **HISTÓRICO** — Documento archivado. Es la especificación original del starter, conservada como trazabilidad. No es la fuente vigente de uso, arquitectura ni operación: ver [`docs/README.md`](../README.md).
+
 > **Documento de ejecución para OpenCode y el harness activo**  
 > **Fecha de referencia:** 2026-08-02  
 > **Nombre provisional del proyecto:** `consulting-hono-api-starter`

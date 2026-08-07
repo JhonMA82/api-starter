@@ -1,5 +1,10 @@
 # Backup y restauración de PostgreSQL
 
+- **Audiencia:** operadores y desarrolladores con persistencia.
+- **Prerrequisitos:** `pg_dump`/`pg_restore`/`psql` en PATH (o `PG_DUMP`/`PG_RESTORE`/`PSQL` apuntando a un entorno contenedorizado), `DATABASE_URL` alcanzable, directorio de volcados con espacio.
+- **Riesgo:** alto — `db:restore` es **destructivo** (`--force` obligatorio); una restauración sobre la base equivocada borra datos.
+- **Último drill registrado:** 2026-08-03 (v0.10.0) — ver [archive/verification-reports/final-validation-0.10.0.md](../archive/verification-reports/final-validation-0.10.0.md).
+
 Runbook operativo del starter para volcar, restaurar y **probar** los backups
 de la base de datos (cierra el control "backups probados" del modelo de amenazas).
 Los scripts son `bun run db:backup` / `bun run db:restore`, con formato
@@ -108,6 +113,17 @@ se saltan con un mensaje claro:
 ```bash
 DATABASE_URL=postgres://postgres:postgres@localhost:5432/api bun test scripts/db/backup-restore.test.ts
 ```
+
+## Verificación de éxito
+
+- `db:backup` produce un archivo `.dump` no vacío y exit 0; `pg_restore --list backups/backup-api-*.dump` lo valida.
+- `db:restore` completa sin errores y el drill de la sección anterior confirma datos: un backup que nunca se restauró no es un backup.
+
+## Rollback y recuperación
+
+- `db:restore` de un volcado anterior **es** el rollback de una restauración fallida o de un cambio de datos erróneo.
+- La rotación con retención (7 diarios + 4 semanales en el ejemplo) garantiza un punto anterior disponible.
+- Los tests automatizados (`scripts/db/backup-restore.test.ts`) hacen el ciclo completo backup → validación → restore cuando las herramientas están disponibles.
 
 ## RPO / RTO (starter)
 

@@ -1,5 +1,7 @@
 # Resultados de la prueba de carga
 
+> **HISTÓRICO** — Medición puntual (2026-08-03) en una máquina local. No es una garantía permanente de rendimiento. Cómo ejecutar la carga hoy: [`docs/operations/load-testing.md`](../../operations/load-testing.md).
+
 Fecha: 2026-08-03. Herramienta: `scripts/load-test.ts` (Bun only, sin
 dependencias). Servidor: `@consulting/api` en localhost.
 

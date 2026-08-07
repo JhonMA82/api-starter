@@ -5,7 +5,7 @@ WORKDIR /app
 # OCI metadata (spec §23.1). Releases must pin IMAGE_VERSION; IMAGE_SOURCE
 # should point at the public repository URL once one exists (the repo has no
 # git remote configured today).
-ARG IMAGE_VERSION=0.10.1
+ARG IMAGE_VERSION=0.11.0
 ARG IMAGE_SOURCE=
 LABEL org.opencontainers.image.title="consulting-api" \
       org.opencontainers.image.version="${IMAGE_VERSION}" \
@@ -94,7 +94,7 @@ COPY --from=install /temp/dev/node_modules node_modules
 COPY . .
 
 FROM base AS release
-ARG IMAGE_VERSION=0.10.1
+ARG IMAGE_VERSION=0.11.0
 ENV NODE_ENV=production
 ENV APP_VERSION="${IMAGE_VERSION}"
 # Shutdown signal (spec §23.1/§23.5): the server drains in-flight requests on
@@ -107,7 +107,7 @@ COPY --from=prerelease /app/packages ./packages
 COPY --from=prerelease /app/modules ./modules
 # Standalone outbox worker entrypoint (compose profile `worker`). Backups,
 # migrations and seed run as ops jobs OUTSIDE the image — never in release
-# (docs/backup-restore.md, docs/migrations-runbook.md; spec §23.4).
+# (docs/operations/backup-and-restore.md, docs/operations/migrations.md).
 RUN mkdir -p /app/scripts
 COPY --from=prerelease /app/scripts/worker.ts /app/scripts/worker.ts
 USER bun

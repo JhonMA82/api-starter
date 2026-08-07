@@ -1,5 +1,7 @@
 # Validación final
 
+> **HISTÓRICO** — Reporte de validación cerrado de la versión 0.10.0. No describe el estado actual del starter: ver [`docs/README.md`](../../README.md) y [`docs/maintainers/testing-and-ci.md`](../../maintainers/testing-and-ci.md).
+
 Fecha: 2026-08-03 (Fase 10, WU5 — documentación final).
 
 Alcance: validación del **starter completo** (`consulting-hono-api-starter`,

@@ -80,10 +80,11 @@ a073d7a, 036ddcd), each with its verification:
   OTel adapter is a future drop-in.
 - **Load test (WU3, spec §23):** `scripts/load-test.ts` (Bun only, no new
   deps) with duration/concurrency/rate/path options, JSON summary and a
-  conservative rate gate; `docs/load-test.md` (how to run, scenarios,
-  thresholds, CI integration) and `docs/load-test-results.md` (runs against
-  `/health`, `/api/v1/example/hello`, `/metrics`; 0 errors, ~190-250 req/s at
-  20 workers on localhost).
+  conservative rate gate; `docs/operations/load-testing.md` (how to run,
+  scenarios, thresholds, CI integration) and the measured results in
+  `docs/archive/verification-reports/load-test-results-2026-08-03.md` (runs
+  against `/health`, `/api/v1/example/hello`, `/metrics`; 0 errors, ~190-250
+  req/s at 20 workers on localhost).
 - **Docker (WU4, spec §23.1/§23.4):** multi-stage `oven/bun:1.3.14-slim`
   build installing the **full workspace** with `--frozen-lockfile` (all
   apps/packages/modules manifests), OCI labels driven by build args
@@ -99,13 +100,15 @@ a073d7a, 036ddcd), each with its verification:
   masked logs) and `scripts/db/restore.ts` (`--file` + mandatory `--force`,
   `pg_restore --clean --if-exists` for custom dumps, `psql` for plain), real
   backup→validate→restore tests against a scratch DB when the tools exist,
-  and the runbook `docs/backup-restore.md` (rotation, verification drill,
+  and the runbook `docs/operations/backup-and-restore.md` (rotation,
+  verification drill,
   RPO/RTO).
 - **Generator sync (WU4):** the generator manifest/plan entries updated so
   generated projects keep the worker/compose/metrics surface coherent with
   their selected features (`generator/src/plan.ts`).
-- **Final documentation (WU5):** `VALIDATION_REPORT.md` (spec §31), the
-  CHANGELOG `0.10.0` consolidation, README and architecture updates.
+- **Final documentation (WU5):** the final validation report (archived at
+  `docs/archive/verification-reports/final-validation-0.10.0.md`, spec §31),
+  the CHANGELOG `0.10.0` consolidation, README and architecture updates.
 
 ## Consequences
 

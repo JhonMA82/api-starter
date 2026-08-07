@@ -32,7 +32,8 @@
     "generator:adopt": "bun generator/src/adopt-project.ts",
     "add:feature": "bun generator/src/add-feature.ts",
     "create:project": "bun generator/src/create-project.ts",
-    "create:module": "bun generator/src/create-module.ts"
+    "create:module": "bun generator/src/create-module.ts",
+    "docs:check": "bun scripts/check-docs.ts"
   },
   "dependencies": {
     "@consulting/module-notes": "workspace:*",

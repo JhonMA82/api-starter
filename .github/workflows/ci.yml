@@ -146,3 +146,14 @@ jobs:
           /usr/lib/postgresql/17/bin/pg_dump --version
           pg_dump --version || true
       - run: bun test modules/notes/tests/migrations.test.ts packages/auth/tests/auth-migrations.test.ts
+
+  docs:
+    name: docs
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7.0.1
+      - uses: oven-sh/setup-bun@v2.2.0
+        with:
+          bun-version-file: .bun-version
+      - run: bun install --frozen-lockfile
+      - run: bun run docs:check

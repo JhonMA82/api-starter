@@ -48,7 +48,7 @@
 
 ### Criterios de admisión y eliminación
 
-Toda nueva feature debe pasar la puerta de admisión (10 puntos de `docs/feature-proposal-template.md`): transversal, segundo caso real, podable, contratos explícitos, sin imports inversos, pruebas, actualización/migración, documentación, responsable, sin abstracción general prematura. Si no cumple, es receta o va directo al proyecto que la necesita.
+Toda nueva feature debe pasar la puerta de admisión (10 puntos de `docs/maintainers/feature-proposal-template.md`): transversal, segundo caso real, podable, contratos explícitos, sin imports inversos, pruebas, actualización/migración, documentación, responsable, sin abstracción general prematura. Si no cumple, es receta o va directo al proyecto que la necesita.
 
 ### Presupuesto de complejidad
 
@@ -57,6 +57,6 @@ Toda nueva feature debe pasar la puerta de admisión (10 puntos de `docs/feature
 ## Consequences
 
 - `generator/updates/registry.ts` y `generator/updates/*.ts` son la fuente de verdad para migraciones versionadas.
-- `docs/feature-proposal-template.md` es obligatorio para proponer features.
-- `docs/updating-generated-projects.md` documenta el flujo `doctor`/`diff`/`update`/`adopt`.
+- `docs/maintainers/feature-proposal-template.md` es obligatorio para proponer features.
+- `docs/guides/update-a-generated-project.md` documenta el flujo `doctor`/`diff`/`update`/`adopt`.
 - Los checks de `apps/api/tests/boundary.test.ts` y `generator/tests/*` verifican límites y poda.

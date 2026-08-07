@@ -1,5 +1,7 @@
 # Verificación del sistema de actualización – api-starter vNext
 
+> **HISTÓRICO** — Verificación cerrada de implementación. La guía vigente de actualización es [`docs/guides/update-a-generated-project.md`](../../guides/update-a-generated-project.md).
+
 - **Fecha:** 2026-08-06
 - **Rama:** `feature/20260806/granular-profiles-composition` (bound_branch: fix-generated-project-update-safety)
 - **Commit base:** `16d8820 docs: changelog 0.11.0, update docs and bump version`

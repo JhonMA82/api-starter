@@ -4,7 +4,7 @@ Convenciones del repositorio para agentes de IA y colaboradores humanos.
 
 ## Idiomas
 
-- Prosa de la documentación (README, docs/architecture.md, este archivo): **español**.
+- Prosa de la documentación (README, `docs/architecture/overview.md`, este archivo): **español**.
 - Código, comentarios en el código, comandos, identificadores, mensajes de commit y ADR (`docs/decisions/`): **inglés**.
 
 ## Pins exactos y reproducción
@@ -17,7 +17,7 @@ Convenciones del repositorio para agentes de IA y colaboradores humanos.
 
 ## Capas y estructura
 
-- Dirección de dependencias: `domain ← application ← http` (ver `docs/architecture.md`).
+- Dirección de dependencias: `domain ← application ← http` (ver `docs/architecture/layers-and-boundaries.md`).
 - `packages/*` (config, core, contracts): **sin** importaciones de Hono ni Bun. Excepción explícita: `packages/auth` puede importar Hono (solo tipos) y better-auth; `packages/auth-client`, solo better-auth.
 - `packages/authorization` es 100% puro (sin dependencias de runtime); `packages/audit` puede importar drizzle-orm y postgres pero no Hono ni Bun ni better-auth.
 - `modules/*`: **sin** importaciones de `@consulting/auth` ni `@consulting/auth-client`; tampoco importan `@consulting/authorization` para decidir permisos en repositorios (la decisión vive en http vía `requirePermission`). `modules/organizations` (cluster de tenant: organizaciones/membresías/invitaciones) sí puede importar `@consulting/audit` para la auditoría por tenant.
@@ -46,7 +46,7 @@ Convenciones del repositorio para agentes de IA y colaboradores humanos.
 | `bun run db:migrate` | aplicar migraciones pendientes (idempotente) |
 | `bun run db:generate` | regenerar migraciones desde los schemas (gate de drift en CI) |
 | `bun run db:seed` | datos semilla (idempotente) |
-| `bun run db:backup` | volcado pg_dump custom a `backups/` (runbook: docs/backup-restore.md) |
+| `bun run db:backup` | volcado pg_dump custom a `backups/` (runbook: docs/operations/backup-and-restore.md) |
 | `bun run db:restore` | restaurar un volcado (`--file` + `--force` obligatorio; destructivo) |
 | `bun run worker` | worker standalone del outbox (perfil compose `worker`) |
 | `DATABASE_URL=... bun test --parallel=1` | tests de DB reales, serializados (CP-C) |
@@ -54,7 +54,7 @@ Convenciones del repositorio para agentes de IA y colaboradores humanos.
 ## Qué no editar
 
 - `bun.lock` (solo regenerar vía `bun install`).
-- Migraciones ya aplicadas: append-only (nunca editarlas; correcciones = nueva migración — ver docs/migrations-runbook.md).
+- Migraciones ya aplicadas: append-only (nunca editarlas; correcciones = nueva migración — ver docs/operations/migrations.md).
 - `catalog/dependencies.json` fuera del flujo de pin/registro (actualizarlo con propósito y licencia verificada).
 - ADR ya aceptados: modificarlos solo con un ADR nuevo o en el flujo de revisión explícito.
 
