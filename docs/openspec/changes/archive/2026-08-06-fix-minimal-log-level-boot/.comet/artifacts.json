@@ -1,0 +1,6 @@
+{
+  "openspec_proposal": "docs/openspec/changes/fix-minimal-log-level-boot/proposal.md",
+  "openspec_design": "docs/openspec/changes/fix-minimal-log-level-boot/design.md",
+  "openspec_tasks": "docs/openspec/changes/fix-minimal-log-level-boot/tasks.md",
+  "archive_directory": "docs/openspec/changes/archive/2026-08-06-fix-minimal-log-level-boot"
+}
