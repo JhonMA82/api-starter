@@ -4,7 +4,7 @@ export const envSchema = z.object({
   APP_ENV: z.enum(["development", "test", "production"]).default("development"),
   APP_VERSION: z.string().min(1).default("0.11.0"),
   API_BASE_URL: z.url().default("http://localhost:3000"),
-  LOG_LEVEL: z.enum(["debug", "info", "warn", "error"]),
+  LOG_LEVEL: z.enum(["debug", "info", "warn", "error"]).default("info"),
   PORT: z.coerce.number().int().min(1).max(65535).default(3000),
   HOST: z.string().min(1).default("0.0.0.0"),
   CORS_ORIGINS: z

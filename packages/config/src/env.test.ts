@@ -48,9 +48,9 @@ describe("parseEnv", () => {
     expect(() => parseEnv(withoutDatabaseUrl)).toThrow(/DATABASE_URL/);
   });
 
-  test("missing LOG_LEVEL aborts naming the variable", () => {
+  test("missing LOG_LEVEL defaults to info", () => {
     const { LOG_LEVEL: _logLevel, ...withoutLogLevel } = validEnv;
-    expect(() => parseEnv(withoutLogLevel)).toThrow(/LOG_LEVEL/);
+    expect(parseEnv(withoutLogLevel).LOG_LEVEL).toBe("info");
   });
 
   test("ConfigError lists every issue one per line", () => {
@@ -60,8 +60,9 @@ describe("parseEnv", () => {
     } catch (error) {
       expect(error).toBeInstanceOf(ConfigError);
       const message = (error as ConfigError).message;
-      expect(message).toMatch(/^Invalid environment configuration:\n {2}- LOG_LEVEL:/);
+      expect(message).toMatch(/^Invalid environment configuration:\n {2}- DATABASE_URL:/);
       expect(message).toContain("  - BETTER_AUTH_SECRET:");
+      expect(message).not.toContain("LOG_LEVEL");
     }
   });
 

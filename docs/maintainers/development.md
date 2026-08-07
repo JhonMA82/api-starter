@@ -7,7 +7,7 @@
 
 ```bash
 bun install           # workspaces + bun.lock fijado (no editar a mano)
-cp .env.example .env  # variables obligatorias: LOG_LEVEL, DATABASE_URL, BETTER_AUTH_SECRET
+cp .env.example .env  # variables obligatorias: DATABASE_URL, BETTER_AUTH_SECRET (LOG_LEVEL por defecto info)
 bun run dev           # apps/api/src/server.ts en watch
 ```
 

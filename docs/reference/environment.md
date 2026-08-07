@@ -12,7 +12,7 @@ La validación vive en `packages/config` (`env.ts`): fail-fast antes de arrancar
 | `APP_ENV` | no | `development` | `development` \| `test` \| `production` |
 | `APP_VERSION` | no | versión de `package.json` | Versión reportada en `/version` |
 | `API_BASE_URL` | no | `http://localhost:3000` | URL base pública de la API |
-| `LOG_LEVEL` | **sí** | — | `debug` \| `info` \| `warn` \| `error` |
+| `LOG_LEVEL` | no | `info` | `debug` \| `info` \| `warn` \| `error` |
 | `PORT` | no | `3000` | Puerto HTTP (1–65535) |
 | `HOST` | no | `0.0.0.0` | Interfaz de escucha |
 | `CORS_ORIGINS` | no | vacío (denegar todo) | Orígenes permitidos, separados por comas |

@@ -58,7 +58,7 @@ cp .env.example .env  # plantilla de entorno; ajusta si hace falta
 bun run dev           # servidor en watch en http://localhost:3000
 ```
 
-Los tres valores obligatorios del repositorio completo son `LOG_LEVEL`, `DATABASE_URL` y `BETTER_AUTH_SECRET`; en un proyecto generado, las obligatorias dependen del perfil (ver [reference/environment.md](docs/reference/environment.md)). Base de datos local: `bun run db:up && bun run db:migrate` (ver [operations/migrations.md](docs/operations/migrations.md)).
+Los valores obligatorios del repositorio completo son `DATABASE_URL` y `BETTER_AUTH_SECRET` (`LOG_LEVEL` por defecto `info`); en un proyecto generado, las obligatorias dependen del perfil (ver [reference/environment.md](docs/reference/environment.md)). Base de datos local: `bun run db:up && bun run db:migrate` (ver [operations/migrations.md](docs/operations/migrations.md)).
 
 ## Documentación
 
